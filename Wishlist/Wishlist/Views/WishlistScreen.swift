@@ -13,12 +13,14 @@ struct WishlistScreen: View {
     @Environment(WishlistRepository.self) private var repository
     @Environment(SettingsStore.self) private var settings
     @Environment(NetworkMonitor.self) private var network
+    @Environment(AppRouter.self) private var router
 
     @State private var path: [WishlistItem.ID] = []
     @State private var searchText = ""
     @State private var isAddingItem = false
     @State private var editingItem: WishlistItem?
     @State private var pendingDeletion: WishlistItem?
+    @State private var addExit: AddItemExit = .none
 
     var body: some View {
         @Bindable var settings = settings
@@ -69,9 +71,21 @@ struct WishlistScreen: View {
                     await repository.refreshPrices()
                 }
                 .sheet(isPresented: $isAddingItem) {
-                    AddItemSheet(onOpenExistingItem: { id in
+                    AddItemSheet(exit: $addExit)
+                }
+                .onChange(of: isAddingItem) { _, isPresented in
+                    // Wait for the sheet to finish dismissing before pushing or
+                    // switching tabs; doing both at once loses the transition.
+                    guard !isPresented else { return }
+                    switch addExit {
+                    case .none:
+                        break
+                    case .openItem(let id):
                         path = [id]
-                    })
+                    case .openSettings:
+                        router.showSettings()
+                    }
+                    addExit = .none
                 }
                 .sheet(item: $editingItem) { item in
                     ItemEditorSheet(mode: .edit(item))

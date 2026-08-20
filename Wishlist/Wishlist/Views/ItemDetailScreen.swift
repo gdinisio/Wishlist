@@ -39,6 +39,12 @@ struct ItemDetailScreen: View {
         .task(id: itemID) {
             notesDraft = repository.item(id: itemID)?.notes ?? ""
         }
+        .onChange(of: repository.item(id: itemID) == nil) { _, hasGone in
+            // Covers deletion from here, from a swipe on the list behind, or
+            // from anywhere else: the screen leaves rather than sitting on a
+            // record that no longer exists.
+            if hasGone { dismiss() }
+        }
     }
 
     // MARK: - Detail
@@ -83,7 +89,6 @@ struct ItemDetailScreen: View {
         ) {
             Button(String(localized: "Delete"), role: .destructive) {
                 repository.delete(id: item.id)
-                dismiss()
             }
             Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
@@ -338,7 +343,6 @@ struct ItemDetailScreen: View {
             isConfirmingDelete = true
         } else {
             repository.delete(id: itemID)
-            dismiss()
         }
     }
 

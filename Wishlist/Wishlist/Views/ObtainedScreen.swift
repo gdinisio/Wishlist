@@ -89,6 +89,13 @@ struct ObtainedScreen: View {
                         }
                     } header: {
                         Text(DateText.monthTitle(group.month))
+                    } footer: {
+                        // A running total belongs at the end of the list, the
+                        // way a statement totals at the bottom.
+                        if group.id == groups.last?.id, searchText.isEmpty,
+                           let summary = listSummary {
+                            Text(summary)
+                        }
                     }
                 }
             }
@@ -122,6 +129,19 @@ struct ObtainedScreen: View {
         return grouped
             .map { ObtainedGroup(month: $0.key, items: $0.value) }
             .sorted { $0.month > $1.month }
+    }
+
+    /// "12 items · £1,204.50 spent" — a total only when every obtained item
+    /// shares a currency, because adding pounds to dollars would be a fiction.
+    private var listSummary: String? {
+        let items = repository.obtainedItems
+        guard !items.isEmpty else { return nil }
+        let count = items.count
+        let itemsText = count == 1
+            ? String(localized: "1 item")
+            : String(localized: "\(count) items")
+        guard let total = Money.total(of: items.compactMap(\.price)) else { return itemsText }
+        return itemsText + " · " + String(localized: "\(total.formatted) spent")
     }
 
     private var deletionTitle: String {

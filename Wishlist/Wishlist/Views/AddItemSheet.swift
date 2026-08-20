@@ -9,15 +9,23 @@
 import SwiftUI
 import Foundation
 
+/// What the Add sheet wants to happen once it has closed. Navigating while a
+/// sheet is still dismissing drops the transition, so the intent is recorded
+/// here and acted on by the presenting screen afterwards.
+nonisolated enum AddItemExit: Equatable {
+    case none
+    case openItem(WishlistItem.ID)
+    case openSettings
+}
+
 struct AddItemSheet: View {
-    var onOpenExistingItem: (WishlistItem.ID) -> Void
+    @Binding var exit: AddItemExit
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.productLookup) private var lookup
     @Environment(WishlistRepository.self) private var repository
     @Environment(SettingsStore.self) private var settings
     @Environment(NetworkMonitor.self) private var network
-    @Environment(AppRouter.self) private var router
 
     @State private var urlText = ""
     @State private var nameText = ""
@@ -149,7 +157,7 @@ struct AddItemSheet: View {
                 .submitLabel(.go)
                 .focused($focusedField, equals: .name)
         } header: {
-            Text("Name")
+            Text(urlText.isEmpty ? String(localized: "Name") : String(localized: "Name (Optional)"))
         } footer: {
             Text(urlText.isEmpty
                  ? String(localized: "No link? Add it by name and fill in the details yourself.")
@@ -179,8 +187,8 @@ struct AddItemSheet: View {
                     tint: .orange
                 )
                 Button(String(localized: "View Saved Item")) {
+                    exit = .openItem(existing.id)
                     dismiss()
-                    onOpenExistingItem(existing.id)
                 }
                 Button(String(localized: "Add Anyway")) {
                     duplicate = nil
@@ -200,8 +208,8 @@ struct AddItemSheet: View {
                 }
                 if error.suggestsSettings {
                     Button(String(localized: "Open Settings")) {
+                        exit = .openSettings
                         dismiss()
-                        router.showSettings()
                     }
                 }
                 if error.allowsManualEntry {
@@ -221,8 +229,8 @@ struct AddItemSheet: View {
                     tint: .secondary
                 )
                 Button(String(localized: "Open Settings")) {
+                    exit = .openSettings
                     dismiss()
-                    router.showSettings()
                 }
             }
         }
@@ -347,6 +355,6 @@ nonisolated enum AddRoute: Hashable {
 }
 
 #Preview {
-    AddItemSheet(onOpenExistingItem: { _ in })
+    AddItemSheet(exit: .constant(.none))
         .withPreviewEnvironment()
 }

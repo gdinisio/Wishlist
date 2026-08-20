@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1 — Navigation and clarity fixes
+
+- **Navigating out of the Add sheet no longer races the dismissal.** "View
+  Saved Item" and "Open Settings" used to push or switch tabs while the sheet
+  was still animating away, which drops the transition. The sheet now records
+  what it wants to happen and the presenting screen acts once it has closed.
+- **An item deleted while its screen is open now leaves that screen.** The
+  handler also used to be attached to the view being torn down, so it could
+  never have run; it now lives on the container that outlives the item, and
+  covers deletion from anywhere — including a swipe on the list behind.
+- Obtained gains a running total in the list footer, matching the wishlist's.
+- The Add sheet's name field is labelled "Name (Optional)" when a link is
+  present, since that is exactly when it is optional.
+
 ## Unreleased
 
 ### Optional language-model assistant
