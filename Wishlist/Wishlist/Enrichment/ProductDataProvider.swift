@@ -38,6 +38,8 @@ nonisolated struct LookupCredentials: Sendable, Equatable {
     var microlinkKey: String?
     /// Reading the product page directly needs no key, so it is on by default.
     var allowsWebPageLookup: Bool = true
+    /// Optional language-model assistance. Off unless the user turns it on.
+    var intelligence: IntelligenceSettings = IntelligenceSettings()
 
     var hasAmazonPAAPI: Bool {
         isPresent(amazonAccessKey) && isPresent(amazonSecretKey) && isPresent(amazonPartnerTag)

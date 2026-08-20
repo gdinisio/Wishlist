@@ -1,0 +1,79 @@
+//
+//  GroqClient.swift
+//  Wishlist
+//
+//  Groq's OpenAI-compatible endpoint, for the Llama models. Groq has a free
+//  tier, which makes it the option that keeps the app free end to end.
+//
+//  These models have no forced-tool-call guarantee, so the schema is stated in
+//  the prompt and JSON mode is requested. Whatever comes back is parsed
+//  defensively and then verified against the page like every other answer.
+//
+
+import Foundation
+
+nonisolated struct GroqClient: LanguageModelClient {
+    let displayName = String(localized: "Groq")
+
+    private let http: HTTPClient
+    private var apiKey: String = ""
+    private var model: String = IntelligenceSettings.defaultGroqModel
+
+    private static let endpoint = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
+
+    init(http: HTTPClient) {
+        self.http = http
+    }
+
+    func configured(apiKey: String, model: String) -> GroqClient {
+        var copy = self
+        copy.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.model = trimmedModel.isEmpty ? IntelligenceSettings.defaultGroqModel : trimmedModel
+        return copy
+    }
+
+    func answer(
+        system: String,
+        prompt: String,
+        function: LanguageModelFunction,
+        maxTokens: Int
+    ) async throws -> JSONValue? {
+        guard !apiKey.isEmpty else { throw LookupError.notAuthorized(provider: displayName) }
+
+        let schemaText = String(data: (try? function.schema.encoded()) ?? Data(), encoding: .utf8) ?? "{}"
+        // JSON mode requires the word "JSON" in the prompt, and the schema has
+        // to be stated rather than enforced.
+        let systemMessage = """
+        \(system)
+
+        Reply with a single JSON object and nothing else. It must match this JSON Schema:
+        \(schemaText)
+        """
+
+        let body: JSONValue = [
+            "model": .string(model),
+            "max_tokens": .number(Double(maxTokens)),
+            "temperature": 0,
+            "response_format": ["type": "json_object"],
+            "messages": [
+                ["role": "system", "content": .string(systemMessage)],
+                ["role": "user", "content": .string(prompt)]
+            ]
+        ]
+
+        var request = URLRequest(url: Self.endpoint)
+        request.httpMethod = "POST"
+        request.httpBody = try body.encoded()
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.setValue("Bearer " + apiKey, forHTTPHeaderField: "Authorization")
+
+        let response = try await http.send(request, provider: displayName)
+        guard let json = JSONValue.parse(response.data),
+              let content = json.value(at: "choices.0.message.content")?.stringValue,
+              let payload = JSONValue.parse(Data(content.utf8))
+        else { return nil }
+
+        return payload
+    }
+}

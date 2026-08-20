@@ -11,6 +11,9 @@ import Foundation
 nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     var id: UUID
     var name: String
+    /// The retailer's own full title, present only when `name` is a shortened
+    /// form of it. Shown on the item's screen so nothing is hidden.
+    var fullName: String?
     var imageURL: URL?
     var productURL: URL?
     var price: Money?
@@ -38,6 +41,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     init(
         id: UUID = UUID(),
         name: String,
+        fullName: String? = nil,
         imageURL: URL? = nil,
         productURL: URL? = nil,
         price: Money? = nil,
@@ -57,6 +61,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     ) {
         self.id = id
         self.name = name
+        self.fullName = fullName
         self.imageURL = imageURL
         self.productURL = productURL
         self.price = price
@@ -78,7 +83,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     // `description` is spelled `details` in Swift to avoid colliding with
     // `CustomStringConvertible`, but persists under its natural key.
     private enum CodingKeys: String, CodingKey {
-        case id, name, imageURL, productURL, price, retailer, availability
+        case id, name, fullName, imageURL, productURL, price, retailer, availability
         case brand, category
         case details = "description"
         case dateAdded, dateObtained, status, notes

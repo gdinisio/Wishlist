@@ -49,6 +49,18 @@ struct SettingsScreen: View {
                             detail: String(localized: "Optional")
                         )
                     }
+                    NavigationLink {
+                        IntelligenceSettingsView()
+                    } label: {
+                        ProviderRow(
+                            title: String(localized: "Assistant"),
+                            symbolName: "sparkles",
+                            isConfigured: settings.intelligence.isConfigured,
+                            detail: settings.intelligence.isConfigured
+                                ? settings.intelligenceProvider.label
+                                : String(localized: "Off")
+                        )
+                    }
                 } header: {
                     Text("Product Lookup")
                 } footer: {

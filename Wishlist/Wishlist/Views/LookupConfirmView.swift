@@ -95,7 +95,7 @@ struct LookupConfirmView: View {
             .listRowSeparator(.hidden)
         } footer: {
             if !item.sources.isEmpty {
-                Text("Found on \(item.sources.joined(separator: ", "))")
+                Text("Details from \(item.sources.joined(separator: ", "))")
             }
         }
     }

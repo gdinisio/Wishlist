@@ -23,6 +23,7 @@ so they are entered once and never asked for again.
 | **Product page** | Free | None | Reads the structured data (schema.org JSON‑LD, Open Graph) that stores already publish, plus Amazon's own page markup. Works for most retailers. |
 | **Amazon Product Advertising API** | Free — Amazon charges nothing per request | Access key, secret key, partner tag | Authoritative Amazon prices, stock and images. Requests are signed with AWS Signature V4 on device. Needs an approved [Amazon Associates](https://affiliate-program.amazon.com) account. |
 | **Microlink** | Free tier, no key | None | Last-resort fallback for pages that refuse to be read directly; recovers a name and picture. A paid key can be added but is never required. |
+| **Assistant** (optional) | Groq free tier, or Claude paid | API key | Reads pages no parser can handle, shortens keyword-stuffed titles, and suggests categories. Off by default. See below. |
 
 **Every service Wishlist uses is free**, and the app is fully functional with no
 keys at all. Nothing here bills per request.
@@ -48,6 +49,47 @@ can't get it, the free page reader still handles Amazon — just less reliably.
 
 ---
 
+## The optional assistant
+
+Some retailers publish no structured data, no Open Graph tags and no markup an
+app can recognise — but a person looking at the page can still see the name and
+the price. Turning on **Settings ▸ Assistant** lets a language model read those
+pages. It is off by default.
+
+Choose **Groq** (free tier, Llama models) or **Claude** (paid; Opus 5, Sonnet 5
+or Haiku 4.5, with per-token prices shown next to each). Keys go in the
+Keychain like every other credential.
+
+### How it stays honest
+
+The app's first rule is that it never invents product information, and adding a
+language model does not get to change that. Three things enforce it:
+
+1. **The model is a locator, not an author.** It is asked for the price *exactly
+   as written* — `"£249.00"`, not a number — and for the shop's own words about
+   stock, not a verdict. Wishlist's own `PriceParser` and `Availability.parse`
+   then interpret those strings, so every judgement stays in code you can read.
+2. **Every answer is checked against the page.** A returned price is accepted
+   only if its digits appear in the page's text in the same order; a name only
+   if its words are there; a brand, a stock phrase and a description only if
+   they appear verbatim. Anything that fails is discarded, not shown. A model
+   that hallucinates a price therefore changes nothing.
+3. **Shortened titles may only ever lose words.** Every word of a shortened
+   title must already appear in the retailer's own title, or the original is
+   kept. The full title is always preserved and shown on the item's screen.
+
+Categories are the one suggestion rather than a lifted fact — they come from a
+fixed list of 26, and are labelled as suggestions in Settings.
+
+### What leaves the device
+
+Only the text of the page being added, and its link — and only when a parser has
+already failed, or a title needs shortening. Your wishlist is never sent. The
+assistant never runs during a price refresh, so an item keeps the name you saved
+it under.
+
+---
+
 ## Architecture
 
 Each layer knows only the one below it, and every boundary is a protocol, so the
@@ -61,6 +103,8 @@ Views (SwiftUI)
             ├─ URLValidator          validate, de-track, canonicalise, extract ASIN
             ├─ RetailerIdentifier    host → store
             ├─ ProductDataProvider   protocol → Amazon PA-API | Product page | Microlink
+            ├─ LanguageModelClient   protocol → Claude | Groq   (optional, off by default)
+            ├─ SourceCheck           verifies every model answer against the page
             ├─ StructuredDataParser  JSON-LD + Open Graph → ProductSnapshot
             ├─ AmazonPageParser      Amazon's own markup, for pages without JSON-LD
             └─ ProductSnapshot       normalised model, merged across providers
@@ -75,6 +119,7 @@ Views (SwiftUI)
 | `Enrichment/` | The lookup pipeline: validation, retailer identification, providers, parsing, merging. |
 | `Persistence/` | `WishlistPersisting` protocol, atomic JSON file store, and the repository. |
 | `Images/` | Download coalescing, disk cache with an LRU budget, ImageIO downsampling. |
+| `Intelligence/` | The optional model layer: two clients behind one protocol, the extractor, the title/category polisher, and the verification that gates all of it. |
 | `Settings/` | Keychain wrapper, observable settings, and the settings UI. |
 | `Views/` | SwiftUI only. No view constructs a URLSession or touches the Keychain. |
 

@@ -23,6 +23,8 @@ final class SettingsStore {
     var amazonSecretKey: String = ""
     var amazonPartnerTag: String = ""
     var microlinkKey: String = ""
+    var claudeKey: String = ""
+    var groqKey: String = ""
 
     // MARK: - Preferences (stored in user defaults)
 
@@ -33,6 +35,15 @@ final class SettingsStore {
     var confirmBeforeDeleting: Bool = true
     var hapticsEnabled: Bool = true
     var sortOrder: WishlistSortOrder = .dateAddedDescending
+
+    // MARK: - Language model assistance (off unless turned on)
+
+    var intelligenceProvider: IntelligenceProvider = .off
+    var claudeModel: ClaudeModel = .opus5
+    var groqModel: String = IntelligenceSettings.defaultGroqModel
+    var readsDifficultPages: Bool = true
+    var shortensTitles: Bool = true
+    var suggestsCategories: Bool = true
 
     @ObservationIgnored private let keychain: KeychainStore
     @ObservationIgnored private let defaults: UserDefaults
@@ -46,6 +57,8 @@ final class SettingsStore {
         amazonSecretKey = keychain.string(forKey: CredentialKey.amazonSecretKey) ?? ""
         amazonPartnerTag = keychain.string(forKey: CredentialKey.amazonPartnerTag) ?? ""
         microlinkKey = keychain.string(forKey: CredentialKey.microlinkKey) ?? ""
+        claudeKey = keychain.string(forKey: CredentialKey.claudeKey) ?? ""
+        groqKey = keychain.string(forKey: CredentialKey.groqKey) ?? ""
 
         amazonMarketplace = defaults.string(forKey: Key.marketplace)
             .flatMap(AmazonMarketplace.init(rawValue:))
@@ -57,6 +70,17 @@ final class SettingsStore {
         sortOrder = defaults.string(forKey: Key.sortOrder)
             .flatMap(WishlistSortOrder.init(rawValue:))
             ?? .dateAddedDescending
+
+        intelligenceProvider = defaults.string(forKey: Key.intelligenceProvider)
+            .flatMap(IntelligenceProvider.init(rawValue:))
+            ?? .off
+        claudeModel = defaults.string(forKey: Key.claudeModel)
+            .flatMap(ClaudeModel.init(rawValue:))
+            ?? .opus5
+        groqModel = defaults.string(forKey: Key.groqModel) ?? IntelligenceSettings.defaultGroqModel
+        readsDifficultPages = defaults.object(forKey: Key.readsDifficultPages) as? Bool ?? true
+        shortensTitles = defaults.object(forKey: Key.shortensTitles) as? Bool ?? true
+        suggestsCategories = defaults.object(forKey: Key.suggestsCategories) as? Bool ?? true
 
         observeChanges()
     }
@@ -72,7 +96,22 @@ final class SettingsStore {
             amazonPartnerTag: amazonPartnerTag,
             amazonMarketplace: amazonMarketplace,
             microlinkKey: microlinkKey,
-            allowsWebPageLookup: allowsWebPageLookup
+            allowsWebPageLookup: allowsWebPageLookup,
+            intelligence: intelligence
+        )
+    }
+
+    /// The language-model configuration, as a value the pipeline can carry.
+    var intelligence: IntelligenceSettings {
+        IntelligenceSettings(
+            provider: intelligenceProvider,
+            claudeKey: claudeKey,
+            claudeModel: claudeModel,
+            groqKey: groqKey,
+            groqModel: groqModel,
+            readsDifficultPages: readsDifficultPages,
+            shortensTitles: shortensTitles,
+            suggestsCategories: suggestsCategories
         )
     }
 
@@ -87,6 +126,8 @@ final class SettingsStore {
         amazonSecretKey = ""
         amazonPartnerTag = ""
         microlinkKey = ""
+        claudeKey = ""
+        groqKey = ""
     }
 
     // MARK: - Automatic persistence
@@ -99,6 +140,14 @@ final class SettingsStore {
             _ = amazonSecretKey
             _ = amazonPartnerTag
             _ = microlinkKey
+            _ = claudeKey
+            _ = groqKey
+            _ = intelligenceProvider
+            _ = claudeModel
+            _ = groqModel
+            _ = readsDifficultPages
+            _ = shortensTitles
+            _ = suggestsCategories
             _ = amazonMarketplace
             _ = allowsWebPageLookup
             _ = refreshOnLaunch
@@ -134,6 +183,8 @@ final class SettingsStore {
         keychain.set(amazonSecretKey, forKey: CredentialKey.amazonSecretKey)
         keychain.set(amazonPartnerTag, forKey: CredentialKey.amazonPartnerTag)
         keychain.set(microlinkKey, forKey: CredentialKey.microlinkKey)
+        keychain.set(claudeKey, forKey: CredentialKey.claudeKey)
+        keychain.set(groqKey, forKey: CredentialKey.groqKey)
 
         defaults.set(amazonMarketplace.rawValue, forKey: Key.marketplace)
         defaults.set(allowsWebPageLookup, forKey: Key.webPageLookup)
@@ -141,6 +192,12 @@ final class SettingsStore {
         defaults.set(confirmBeforeDeleting, forKey: Key.confirmDelete)
         defaults.set(hapticsEnabled, forKey: Key.haptics)
         defaults.set(sortOrder.rawValue, forKey: Key.sortOrder)
+        defaults.set(intelligenceProvider.rawValue, forKey: Key.intelligenceProvider)
+        defaults.set(claudeModel.rawValue, forKey: Key.claudeModel)
+        defaults.set(groqModel, forKey: Key.groqModel)
+        defaults.set(readsDifficultPages, forKey: Key.readsDifficultPages)
+        defaults.set(shortensTitles, forKey: Key.shortensTitles)
+        defaults.set(suggestsCategories, forKey: Key.suggestsCategories)
     }
 
     /// Start from the storefront that matches the user's region, so a UK user
@@ -165,5 +222,11 @@ final class SettingsStore {
         static let confirmDelete = "settings.confirmBeforeDeleting"
         static let haptics = "settings.hapticsEnabled"
         static let sortOrder = "settings.sortOrder"
+        static let intelligenceProvider = "settings.intelligenceProvider"
+        static let claudeModel = "settings.claudeModel"
+        static let groqModel = "settings.groqModel"
+        static let readsDifficultPages = "settings.readsDifficultPages"
+        static let shortensTitles = "settings.shortensTitles"
+        static let suggestsCategories = "settings.suggestsCategories"
     }
 }

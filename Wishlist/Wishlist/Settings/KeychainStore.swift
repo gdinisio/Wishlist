@@ -94,8 +94,11 @@ nonisolated enum CredentialKey {
     /// value stored by an earlier build.
     static let legacyRainforestKey = "rainforest.apiKey"
     static let microlinkKey = "microlink.apiKey"
+    static let claudeKey = "claude.apiKey"
+    static let groqKey = "groq.apiKey"
 
     static let all = [
-        amazonAccessKey, amazonSecretKey, amazonPartnerTag, microlinkKey, legacyRainforestKey
+        amazonAccessKey, amazonSecretKey, amazonPartnerTag, microlinkKey,
+        claudeKey, groqKey, legacyRainforestKey
     ]
 }

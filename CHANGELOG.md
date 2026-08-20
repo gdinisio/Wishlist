@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Optional language-model assistant
+
+Off by default. Adds a third stage to the lookup chain for pages no parser can
+read, plus title tidying and category suggestions.
+
+- Two providers behind one `LanguageModelClient` protocol — **Groq** (free tier)
+  and **Claude** (paid; Opus 5, Sonnet 5 or Haiku 4.5, with per-token prices
+  shown in Settings). Swift has no official Anthropic SDK, so Claude is reached
+  over the Messages API through the app's own `HTTPClient`, as a forced tool
+  call so the reply is structured by construction.
+- **The no-fabrication rule is enforced in code, not in the prompt.** The model
+  is asked for the price *as written* and the shop's *own words* about stock;
+  `PriceParser` and `Availability.parse` do the interpreting. `SourceCheck` then
+  verifies every returned value against the page's text — a price must have its
+  digits present in the same order, a name its words, a brand and description
+  verbatim — and discards whatever fails.
+- Shortened titles may only lose words, never gain them; the retailer's full
+  title is preserved on the item's screen as `fullName`.
+- Categories come from a fixed list of 26 and are labelled as suggestions.
+- Never runs during a price refresh, so saved items keep their names.
+- A model failure never fails a lookup — the assistant is strictly additive.
+
 ## 1.0
 
 First release. Save things you want to buy, let the app enrich them from the

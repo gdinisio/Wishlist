@@ -13,6 +13,8 @@ import Foundation
 
 nonisolated struct ProductSnapshot: Hashable, Sendable {
     var name: String?
+    /// The retailer's own full title, kept when `name` has been shortened.
+    var fullName: String?
     var imageURL: URL?
     var productURL: URL?
     var price: Money?
@@ -28,6 +30,7 @@ nonisolated struct ProductSnapshot: Hashable, Sendable {
 
     init(
         name: String? = nil,
+        fullName: String? = nil,
         imageURL: URL? = nil,
         productURL: URL? = nil,
         price: Money? = nil,
@@ -39,6 +42,7 @@ nonisolated struct ProductSnapshot: Hashable, Sendable {
         sources: [String] = []
     ) {
         self.name = name
+        self.fullName = fullName
         self.imageURL = imageURL
         self.productURL = productURL
         self.price = price
@@ -66,6 +70,7 @@ nonisolated struct ProductSnapshot: Hashable, Sendable {
     func merging(_ other: ProductSnapshot) -> ProductSnapshot {
         var merged = self
         merged.name = name ?? other.name
+        merged.fullName = fullName ?? other.fullName
         merged.imageURL = imageURL ?? other.imageURL
         merged.productURL = productURL ?? other.productURL
         merged.price = price ?? other.price
@@ -87,6 +92,7 @@ nonisolated struct ProductSnapshot: Hashable, Sendable {
         let finalName = (resolvedName?.isEmpty == false ? resolvedName! : fallbackName)
         var item = WishlistItem(
             name: finalName,
+            fullName: fullName,
             imageURL: imageURL,
             productURL: productURL ?? requestedURL,
             price: price,

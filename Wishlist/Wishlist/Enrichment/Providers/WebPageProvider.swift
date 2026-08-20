@@ -15,9 +15,12 @@ nonisolated struct WebPageProvider: ProductDataProvider {
     let progressMessage = String(localized: "Reading the product page…")
 
     private let http: HTTPClient
+    private let models: LanguageModelRouter
+    private let extractor = ProductExtractor()
 
-    init(http: HTTPClient) {
+    init(http: HTTPClient, models: LanguageModelRouter) {
         self.http = http
+        self.models = models
     }
 
     func canHandle(_ request: LookupRequest, credentials: LookupCredentials) -> Bool {
@@ -60,8 +63,27 @@ nonisolated struct WebPageProvider: ProductDataProvider {
             )
         }
 
+        // Some retailers publish nothing a parser can use. If the user has
+        // turned it on, a model reads the page's text and points at the values
+        // — every one of which is then checked back against that text.
+        if needsAssistance(snapshot), credentials.intelligence.readsDifficultPages,
+           let client = models.client(for: credentials.intelligence) {
+            let digest = HTMLParser.textDigest(from: html)
+            let assisted = await extractor.snapshot(
+                fromPageText: digest,
+                link: link,
+                client: client
+            )
+            snapshot = snapshot.merging(assisted)
+        }
+
         guard !snapshot.isEmpty else { throw LookupError.noProductData }
         return snapshot
+    }
+
+    /// Worth asking a model only when the two things that matter are missing.
+    private func needsAssistance(_ snapshot: ProductSnapshot) -> Bool {
+        snapshot.name == nil || snapshot.price == nil
     }
 
     /// Retailers serve very different markup to clients that do not look like a

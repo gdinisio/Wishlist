@@ -361,6 +361,43 @@ nonisolated enum HTMLParser {
         return result
     }
 
+    /// Readable page text with scripts, styles and inline SVG removed,
+    /// whitespace collapsed and a hard cap applied — what a language model is
+    /// given to read, and the text every answer it gives is checked against.
+    static func textDigest(from html: String, limit: Int = 12_000) -> String {
+        var stripped = html
+        for element in ["script", "style", "noscript", "svg", "head"] {
+            stripped = removingElements(named: element, in: stripped)
+        }
+        let text = plainText(from: stripped)
+        return text.count > limit ? String(text.prefix(limit)) : text
+    }
+
+    /// Removes whole elements, contents included. `plainText` only drops tags,
+    /// which would otherwise leave a page's JavaScript in the middle of its
+    /// prose.
+    static func removingElements(named name: String, in html: String) -> String {
+        var result = ""
+        var cursor = html.startIndex
+
+        while let open = html.range(of: "<" + name, options: .caseInsensitive, range: cursor..<html.endIndex) {
+            result.append(contentsOf: html[cursor..<open.lowerBound])
+            guard let close = html.range(
+                    of: "</" + name,
+                    options: .caseInsensitive,
+                    range: open.upperBound..<html.endIndex
+                  ),
+                  let end = html.range(of: ">", range: close.upperBound..<html.endIndex)
+            else {
+                cursor = open.upperBound
+                break
+            }
+            cursor = end.upperBound
+        }
+        result.append(contentsOf: html[cursor...])
+        return result
+    }
+
     /// Strips tags from a snippet of HTML so a product description reads as
     /// plain text.
     static func plainText(from html: String) -> String {

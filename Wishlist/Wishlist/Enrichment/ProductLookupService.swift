@@ -21,6 +21,7 @@ nonisolated enum LookupStage: Sendable, Equatable {
     case validating
     case resolvingLink
     case contacting(String)
+    case tidying
     case finishing
 
     var message: String {
@@ -28,6 +29,7 @@ nonisolated enum LookupStage: Sendable, Equatable {
         case .validating: String(localized: "Checking the link…")
         case .resolvingLink: String(localized: "Following the link…")
         case .contacting(let message): message
+        case .tidying: String(localized: "Tidying up…")
         case .finishing: String(localized: "Almost there…")
         }
     }
@@ -50,25 +52,34 @@ nonisolated struct LookupOutcome: Sendable {
 nonisolated final class ProductLookupService: Sendable {
     private let http: HTTPClient
     private let providers: [any ProductDataProvider]
+    private let models: LanguageModelRouter
+    private let polisher = SnapshotPolisher()
     private let coalescer = TaskCoalescer<ProductSnapshot>()
     private let log = Logger(subsystem: "com.gdinisio.Wishlist", category: "lookup")
 
-    init(http: HTTPClient, providers: [any ProductDataProvider]) {
+    init(
+        http: HTTPClient,
+        providers: [any ProductDataProvider],
+        models: LanguageModelRouter
+    ) {
         self.http = http
         self.providers = providers
+        self.models = models
     }
 
     /// The chain used by the app, and every step of it is free to use: Amazon's
     /// own API first for Amazon links, then the store's product page, then a
     /// rendering service for pages that refuse to be read directly.
     static func makeDefault(http: HTTPClient = URLSessionHTTPClient()) -> ProductLookupService {
-        ProductLookupService(
+        let models = LanguageModelRouter(http: http)
+        return ProductLookupService(
             http: http,
             providers: [
                 AmazonPAAPIProvider(http: http),
-                WebPageProvider(http: http),
+                WebPageProvider(http: http, models: models),
                 MicrolinkProvider(http: http)
-            ]
+            ],
+            models: models
         )
     }
 
@@ -104,7 +115,7 @@ nonisolated final class ProductLookupService: Sendable {
             }
             let (snapshot, failure) = await runChain(request, credentials: credentials, onStage: onStage)
             return LookupOutcome(
-                snapshot: snapshot,
+                snapshot: await polished(snapshot, credentials: credentials, onStage: onStage),
                 link: nil,
                 fallbackName: trimmedName,
                 partialFailure: snapshot.isEmpty ? failure : nil
@@ -135,10 +146,27 @@ nonisolated final class ProductLookupService: Sendable {
 
         onStage(.finishing)
         return LookupOutcome(
-            snapshot: snapshot,
+            snapshot: await polished(snapshot, credentials: credentials, onStage: onStage),
             link: link,
             fallbackName: trimmedName.isEmpty ? (link.retailer.name) : trimmedName,
             partialFailure: snapshot.isPartial ? failure : nil
+        )
+    }
+
+    /// Shortens a keyword-stuffed title and fills in a missing category, when
+    /// the user has asked for that. Never runs on a refresh: an item that is
+    /// already on the list keeps the name it was saved under.
+    private func polished(
+        _ snapshot: ProductSnapshot,
+        credentials: LookupCredentials,
+        onStage: @Sendable @escaping (LookupStage) -> Void
+    ) async -> ProductSnapshot {
+        guard let client = models.client(for: credentials.intelligence) else { return snapshot }
+        onStage(.tidying)
+        return await polisher.polished(
+            snapshot,
+            settings: credentials.intelligence,
+            client: client
         )
     }
 

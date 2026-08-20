@@ -41,7 +41,46 @@ extension JSONValue: Decodable {
     }
 }
 
+extension JSONValue: Encodable {
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value): try container.encode(value)
+        case .number(let value):
+            // Whole numbers encode as integers so a JSON Schema reading
+            // "maxLength": 40 never arrives as 40.0.
+            if value == value.rounded(), abs(value) < 9_007_199_254_740_992 {
+                try container.encode(Int(value))
+            } else {
+                try container.encode(value)
+            }
+        case .bool(let value): try container.encode(value)
+        case .object(let value): try container.encode(value)
+        case .array(let value): try container.encode(value)
+        case .null: try container.encodeNil()
+        }
+    }
+}
+
+/// Literal conveniences, so a JSON Schema written in Swift reads like the JSON
+/// it becomes.
+extension JSONValue: ExpressibleByStringLiteral, ExpressibleByIntegerLiteral,
+                     ExpressibleByBooleanLiteral, ExpressibleByArrayLiteral,
+                     ExpressibleByDictionaryLiteral {
+    nonisolated init(stringLiteral value: String) { self = .string(value) }
+    nonisolated init(integerLiteral value: Int) { self = .number(Double(value)) }
+    nonisolated init(booleanLiteral value: Bool) { self = .bool(value) }
+    nonisolated init(arrayLiteral elements: JSONValue...) { self = .array(elements) }
+    nonisolated init(dictionaryLiteral elements: (String, JSONValue)...) {
+        self = .object(Dictionary(elements) { _, last in last })
+    }
+}
+
 nonisolated extension JSONValue {
+    func encoded() throws -> Data {
+        try JSONEncoder().encode(self)
+    }
+
     static func parse(_ data: Data) -> JSONValue? {
         try? JSONDecoder().decode(JSONValue.self, from: data)
     }

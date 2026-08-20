@@ -28,6 +28,42 @@ final class ConnectionTester {
         outcome = .idle
     }
 
+    /// A deliberately trivial round trip: the model must return one fixed
+    /// value into a schema. It proves the key, the model name and the network
+    /// path without spending anything meaningful.
+    func test(model client: any LanguageModelClient) async {
+        outcome = .testing
+        let function = LanguageModelFunction(
+            name: "report_status",
+            purpose: "Report that the connection works.",
+            schema: [
+                "type": "object",
+                "properties": [
+                    "status": ["type": "string", "enum": ["ready"]]
+                ],
+                "required": ["status"],
+                "additionalProperties": false
+            ]
+        )
+        do {
+            let answer = try await client.answer(
+                system: "You are being checked for connectivity.",
+                prompt: "Report your status.",
+                function: function,
+                maxTokens: 64
+            )
+            if answer?["status"]?.stringValue == "ready" {
+                outcome = .success(client.displayName)
+            } else {
+                outcome = .failure(.providerUnavailable(provider: client.displayName))
+            }
+        } catch let error as LookupError {
+            outcome = .failure(error)
+        } catch {
+            outcome = .failure(.providerUnavailable(provider: client.displayName))
+        }
+    }
+
     func test(
         provider: any ProductDataProvider,
         request: LookupRequest,

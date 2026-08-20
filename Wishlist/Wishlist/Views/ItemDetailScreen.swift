@@ -182,6 +182,15 @@ struct ItemDetailScreen: View {
             if let category = item.category, !category.isEmpty {
                 LabeledContent(String(localized: "Category"), value: category)
             }
+            // Shown whenever the displayed name is a shortened form, so the
+            // store's own wording is never hidden.
+            if let fullName = item.fullName, !fullName.isEmpty, fullName != item.name {
+                LabeledContent(String(localized: "Full Title")) {
+                    Text(fullName)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(.secondary)
+                }
+            }
             if let original = item.originalPrice, item.priceChange != nil {
                 LabeledContent(String(localized: "When Added"), value: original.formatted)
             }
