@@ -1,5 +1,7 @@
 # Wishlist
 
+**Version 1.0** — see [CHANGELOG.md](CHANGELOG.md).
+
 A native iOS app for saving things you want to buy. Paste a link, Wishlist finds
 the name, price, picture and availability, and keeps it until you get it.
 
@@ -124,3 +126,8 @@ None of these are required — the app builds and runs as it is.
 
 - Xcode 27 or later
 - iOS 18 or later (project currently targets iOS 27)
+
+## Version
+
+1.0 (`MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION = 1`). Release notes
+are in [CHANGELOG.md](CHANGELOG.md).
