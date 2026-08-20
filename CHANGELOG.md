@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.0 — Collections, budget, price alerts
+
+### Collections
+Optional grouping — a room, a person, an occasion. Assigned in the item editor
+or from an item's context menu, filtered from the wishlist's existing menu.
+Collections are derived from the items themselves, so one stops existing the
+moment nothing is in it, and there is no empty-folder housekeeping.
+
+### Available to spend
+Set an amount in Settings and the wishlist shows what you have left, gains a
+"Within Budget" filter, and each item says where it stands against it. Only
+compared when the currencies match. **Wishlist never changes the figure for
+you** — marking something obtained does not silently spend it.
+
+### Price drop alerts
+A local notification when a refresh finds something cheaper than the last price
+recorded for it. Only for drops actually observed, never a prediction.
+Permission is requested when the toggle is turned on, not at launch, and a
+denied permission is explained rather than silently ignored.
+
+### Product photos
+Tap the image on an item to open it full screen — double tap to zoom, drag to
+move, share from the toolbar.
+
+Also: the wishlist's summary line now reflects what is actually on screen, and a
+filter that hides everything says so instead of pretending the wishlist is
+empty.
+
 ## 1.1 — Navigation and clarity fixes
 
 - **Navigating out of the Add sheet no longer races the dismissal.** "View

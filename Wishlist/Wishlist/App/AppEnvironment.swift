@@ -17,6 +17,7 @@ final class AppEnvironment {
     let lookup: ProductLookupService
     let repository: WishlistRepository
     let router = AppRouter()
+    let alerts = PriceAlertCenter()
 
     init(
         settings: SettingsStore = SettingsStore(),

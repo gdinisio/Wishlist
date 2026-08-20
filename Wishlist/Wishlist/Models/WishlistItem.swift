@@ -21,6 +21,10 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     var availability: Availability
     var brand: String?
     var category: String?
+    /// Optional grouping the user assigns, e.g. "Kitchen" or "Gifts". Plain
+    /// text rather than a separate entity: a wishlist does not need a taxonomy,
+    /// and this keeps items self-contained for a future sync.
+    var collectionName: String?
     var details: String?
     var dateAdded: Date
     var dateObtained: Date?
@@ -49,6 +53,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         availability: Availability = .unknown,
         brand: String? = nil,
         category: String? = nil,
+        collectionName: String? = nil,
         details: String? = nil,
         dateAdded: Date = .now,
         dateObtained: Date? = nil,
@@ -69,6 +74,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         self.availability = availability
         self.brand = brand
         self.category = category
+        self.collectionName = collectionName
         self.details = details
         self.dateAdded = dateAdded
         self.dateObtained = dateObtained
@@ -84,7 +90,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     // `CustomStringConvertible`, but persists under its natural key.
     private enum CodingKeys: String, CodingKey {
         case id, name, fullName, imageURL, productURL, price, retailer, availability
-        case brand, category
+        case brand, category, collectionName
         case details = "description"
         case dateAdded, dateObtained, status, notes
         case priceHistory, dateRefreshed, sources, dateModified
@@ -123,6 +129,22 @@ nonisolated extension WishlistItem {
             current: current,
             difference: Money(amount: current.amount - original.amount, currencyCode: current.currencyCode)
         )
+    }
+
+    /// Whether this item's price fits inside an amount. Only comparable when
+    /// the currencies match — an unknown price never "fits", because saying so
+    /// would be a guess.
+    func fits(within budget: Money) -> Bool {
+        guard let price, price.canCompare(with: budget) else { return false }
+        return price.amount <= budget.amount
+    }
+
+    /// How far over an amount this item is, when it is over and comparable.
+    func amountOver(_ budget: Money) -> Money? {
+        guard let price, price.canCompare(with: budget), price.amount > budget.amount else {
+            return nil
+        }
+        return Money(amount: price.amount - budget.amount, currencyCode: price.currencyCode)
     }
 
     /// Fields a lookup was unable to fill. Drives the "some details are

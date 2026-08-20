@@ -27,6 +27,8 @@ final class WishlistRepository {
     private(set) var lastAction: UndoableAction?
     /// Result of the last price refresh, shown briefly and then cleared.
     private(set) var refreshSummary: String?
+    /// Price falls seen in the last refresh, for whoever wants to announce them.
+    private(set) var lastPriceDrops: [PriceDrop] = []
 
     // MARK: - Dependencies
 
@@ -79,9 +81,40 @@ final class WishlistRepository {
     }
 
     /// Active items, sorted and filtered for the wishlist screen.
-    func activeItems(sortedBy order: WishlistSortOrder, matching query: String = "") -> [WishlistItem] {
-        let filtered = Self.filter(activeItems, query: query)
-        return Self.sort(filtered, by: order)
+    func activeItems(
+        sortedBy order: WishlistSortOrder,
+        filter: WishlistFilter = WishlistFilter(),
+        budget: Money? = nil
+    ) -> [WishlistItem] {
+        var result = Self.filter(activeItems, query: filter.searchText)
+        if let collection = filter.collection {
+            result = result.filter { $0.collectionName == collection }
+        }
+        if filter.withinBudget, let budget {
+            result = result.filter { $0.fits(within: budget) }
+        }
+        return Self.sort(result, by: order)
+    }
+
+    /// Every collection in use, alphabetically. Derived rather than stored, so
+    /// a collection stops existing the moment nothing is in it.
+    var collectionNames: [String] {
+        var seen = Set<String>()
+        for item in items {
+            if let name = item.collectionName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !name.isEmpty {
+                seen.insert(name)
+            }
+        }
+        return seen.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    func setCollection(_ name: String?, for id: WishlistItem.ID) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        items[index].collectionName = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        items[index].touch()
+        scheduleSave()
     }
 
     func obtainedItems(matching query: String) -> [WishlistItem] {
@@ -278,6 +311,7 @@ final class WishlistRepository {
 
         var updatedCount = 0
         var failureCount = 0
+        var drops: [PriceDrop] = []
         let batchSize = 3
 
         for batch in stride(from: 0, to: targets.count, by: batchSize) {
@@ -303,12 +337,19 @@ final class WishlistRepository {
                 guard let index = items.firstIndex(where: { $0.id == id }) else { continue }
                 let hadPrice = items[index].price
                 apply(snapshot, to: &items[index])
-                if items[index].price != hadPrice { updatedCount += 1 }
+                if items[index].price != hadPrice {
+                    updatedCount += 1
+                    if let was = hadPrice, let now = items[index].price,
+                       was.canCompare(with: now), now.amount < was.amount {
+                        drops.append(PriceDrop(item: items[index], previous: was))
+                    }
+                }
             }
             if Task.isCancelled { break }
         }
 
         scheduleSave()
+        lastPriceDrops = drops
         refreshSummary = Self.refreshMessage(updated: updatedCount, failed: failureCount)
         scheduleSummaryClear()
     }
@@ -421,6 +462,31 @@ nonisolated struct UndoableAction: Identifiable, Sendable {
         case .deleted: "trash.fill"
         }
     }
+}
+
+/// A price that fell between two observations.
+nonisolated struct PriceDrop: Identifiable, Sendable {
+    var item: WishlistItem
+    var previous: Money
+
+    var id: WishlistItem.ID { item.id }
+
+    var saving: Money? {
+        guard let now = item.price, now.canCompare(with: previous) else { return nil }
+        return Money(amount: previous.amount - now.amount, currencyCode: now.currencyCode)
+    }
+}
+
+/// What the wishlist screen is currently showing. Held by the view rather than
+/// persisted: a filter is a way of looking, not a setting.
+nonisolated struct WishlistFilter: Equatable, Sendable {
+    var searchText: String = ""
+    var collection: String?
+    var withinBudget: Bool = false
+
+    /// True when something other than search is narrowing the list, which is
+    /// what the toolbar indicator reflects.
+    var isNarrowed: Bool { collection != nil || withinBudget }
 }
 
 nonisolated enum WishlistSortOrder: String, CaseIterable, Codable, Sendable, Identifiable {

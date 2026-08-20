@@ -14,6 +14,7 @@ struct WishlistScreen: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(NetworkMonitor.self) private var network
     @Environment(AppRouter.self) private var router
+    @Environment(PriceAlertCenter.self) private var alerts
 
     @State private var path: [WishlistItem.ID] = []
     @State private var searchText = ""
@@ -21,6 +22,8 @@ struct WishlistScreen: View {
     @State private var editingItem: WishlistItem?
     @State private var pendingDeletion: WishlistItem?
     @State private var addExit: AddItemExit = .none
+    @State private var selectedCollection: String?
+    @State private var onlyWithinBudget = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -48,16 +51,48 @@ struct WishlistScreen: View {
                             }
                             .pickerStyle(.inline)
 
+                            if !repository.collectionNames.isEmpty {
+                                Section {
+                                    Picker(selection: $selectedCollection) {
+                                        Text("All Collections").tag(String?.none)
+                                        ForEach(repository.collectionNames, id: \.self) { name in
+                                            Text(name).tag(String?.some(name))
+                                        }
+                                    } label: {
+                                        Text("Collection")
+                                    }
+                                    .pickerStyle(.inline)
+                                }
+                            }
+
+                            if settings.availableToSpend != nil {
+                                Section {
+                                    Toggle(isOn: $onlyWithinBudget) {
+                                        Label(String(localized: "Within Budget"), systemImage: "creditcard")
+                                    }
+                                }
+                            }
+
                             Section {
                                 Button {
-                                    Task { await repository.refreshPrices() }
+                                    Task { await refreshPrices() }
                                 } label: {
                                     Label(String(localized: "Refresh Prices"), systemImage: "arrow.clockwise")
                                 }
                                 .disabled(repository.isRefreshing || repository.activeItems.isEmpty)
                             }
                         } label: {
-                            Label(String(localized: "More"), systemImage: "ellipsis.circle")
+                            // The control keeps its place; only its symbol
+                            // changes, so an active filter is visible without
+                            // adding a second button to the bar.
+                            Label(
+                                isNarrowed
+                                    ? String(localized: "Filters On")
+                                    : String(localized: "More"),
+                                systemImage: isNarrowed
+                                    ? "line.3.horizontal.decrease.circle.fill"
+                                    : "ellipsis.circle"
+                            )
                         }
 
                         Button {
@@ -68,7 +103,7 @@ struct WishlistScreen: View {
                     }
                 }
                 .refreshable {
-                    await repository.refreshPrices()
+                    await refreshPrices()
                 }
                 .sheet(isPresented: $isAddingItem) {
                     AddItemSheet(exit: $addExit)
@@ -199,6 +234,19 @@ struct WishlistScreen: View {
     private var emptyState: some View {
         if !searchText.isEmpty {
             ContentUnavailableView.search(text: searchText)
+        } else if isNarrowed {
+            // A filter hiding everything must not read as an empty wishlist.
+            ContentUnavailableView {
+                Label(String(localized: "Nothing Matches"), systemImage: "line.3.horizontal.decrease.circle")
+            } description: {
+                Text(narrowedEmptyDescription)
+            } actions: {
+                Button(String(localized: "Show All Items")) {
+                    selectedCollection = nil
+                    onlyWithinBudget = false
+                }
+                .buttonStyle(.borderedProminent)
+            }
         } else {
             ContentUnavailableView {
                 Label(String(localized: "Nothing on Your Wishlist"), systemImage: "star")
@@ -217,20 +265,59 @@ struct WishlistScreen: View {
 
     // MARK: - Derived
 
-    private var visibleItems: [WishlistItem] {
-        repository.activeItems(sortedBy: settings.sortOrder, matching: searchText)
+    private var currentFilter: WishlistFilter {
+        WishlistFilter(
+            searchText: searchText,
+            collection: selectedCollection,
+            withinBudget: onlyWithinBudget
+        )
     }
 
-    /// "6 items · £412.98" — a total only when every item shares a currency,
+    private var isNarrowed: Bool { currentFilter.isNarrowed }
+
+    private var visibleItems: [WishlistItem] {
+        repository.activeItems(
+            sortedBy: settings.sortOrder,
+            filter: currentFilter,
+            budget: settings.availableToSpend
+        )
+    }
+
+    private var narrowedEmptyDescription: String {
+        if let collection = selectedCollection, onlyWithinBudget {
+            return String(localized: "Nothing in “\(collection)” fits your budget.")
+        }
+        if let collection = selectedCollection {
+            return String(localized: "There’s nothing in “\(collection)” yet.")
+        }
+        return String(localized: "Nothing on your wishlist fits your budget right now.")
+    }
+
+    private func refreshPrices() async {
+        await repository.refreshPrices()
+        guard settings.notifiesPriceDrops else { return }
+        await alerts.announce(repository.lastPriceDrops)
+    }
+
+    /// "Kitchen · 6 items · £412.98 · £150.00 to spend" — each part only when
+    /// it is true. A total appears only when every item shares a currency,
     /// because adding pounds to dollars would be a fiction.
     private var listSummary: String? {
-        let count = repository.activeItems.count
-        guard count > 0 else { return nil }
-        let itemsText = count == 1
+        let shown = visibleItems
+        guard !shown.isEmpty else { return nil }
+
+        var parts: [String] = []
+        if let collection = selectedCollection { parts.append(collection) }
+        parts.append(shown.count == 1
             ? String(localized: "1 item")
-            : String(localized: "\(count) items")
-        guard let total = repository.activeTotal else { return itemsText }
-        return itemsText + " · " + total.formatted
+            : String(localized: "\(shown.count) items"))
+        if let total = Money.total(of: shown.compactMap(\.price)) {
+            parts.append(total.formatted)
+        }
+        if let budget = settings.availableToSpend {
+            parts.append(String(localized: "\(budget.formatted) to spend"))
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var deletionTitle: String {

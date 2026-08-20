@@ -141,6 +141,26 @@ changes to any view.
 
 ---
 
+## Organising and budgeting
+
+**Collections** are optional groupings you assign per item — a room, a person,
+an occasion. They are derived from the items rather than stored separately, so
+a collection exists exactly as long as something is in it. Filter by one from
+the wishlist's menu; the toolbar symbol fills while a filter is narrowing the
+list.
+
+**Available to spend** is an amount you set in Settings. The wishlist then shows
+what is left, offers a "Within Budget" filter, and each item says whether it
+fits. Comparisons only happen when currencies match. The figure is never changed
+for you — obtaining something does not silently spend it, because quietly moving
+someone's money is not a thing an app should do.
+
+**Price drop alerts** post a local notification when a refresh observes a price
+lower than the one previously recorded. Permission is asked for when the toggle
+is switched on. Alerts currently fire when a refresh runs with the app open;
+adding a Background App Refresh capability in Xcode would let them fire on their
+own — see below.
+
 ## Accessibility
 
 - Dynamic Type throughout; list rows re-flow to a stacked layout at
@@ -169,7 +189,12 @@ None of these are required — the app builds and runs as it is.
    `FileWishlistStore`'s directory would change.
 3. **iCloud sync** — add the iCloud capability with CloudKit, then add a
    `CloudKitWishlistStore: WishlistPersisting` alongside the file store.
-4. **Deployment target** — the project is set to iOS 27. The code needs
+4. **Background price checks** — the price-drop alerts work from any refresh
+   while the app is open. To have them run on their own, add the Background
+   Modes capability with *Background fetch*, register a `BGAppRefreshTask`, and
+   call `repository.refreshPrices()` from it. Everything else is already in
+   place.
+5. **Deployment target** — the project is set to iOS 27. The code needs
    **iOS 18 or later** (the `Tab` API in `TabView`); everything else is iOS 17.
    Lowering it to 18.0 in the target's build settings is safe.
 

@@ -7,6 +7,21 @@
 
 import Foundation
 
+/// The currency codes offered in pickers. Deliberately a short, common list
+/// rather than every ISO code — plus whatever the user already has selected.
+nonisolated enum CurrencyOptions {
+    static let common: [String] = [
+        "GBP", "USD", "EUR", "JPY", "CAD", "AUD", "NZD", "CHF", "SEK",
+        "NOK", "DKK", "PLN", "CZK", "INR", "SGD", "HKD", "CNY", "KRW",
+        "BRL", "MXN", "ZAR", "AED", "TRY", "ILS"
+    ]
+
+    static func including(_ code: String?) -> [String] {
+        guard let code, !code.isEmpty, !common.contains(code) else { return common }
+        return [code] + common
+    }
+}
+
 nonisolated enum DateText {
     /// Recent dates read relatively ("3 days ago"); older ones read absolutely,
     /// which is how iOS itself presents timestamps.

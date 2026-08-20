@@ -20,9 +20,11 @@ struct WishlistApp: App {
                 .environment(environment.settings)
                 .environment(environment.network)
                 .environment(environment.router)
+                .environment(environment.alerts)
                 .environment(\.productLookup, environment.lookup)
                 .task {
                     await environment.repository.load()
+                    await environment.alerts.refreshAuthorization()
                     await refreshIfAppropriate()
                 }
                 .onChange(of: scenePhase) { _, phase in
@@ -44,5 +46,7 @@ struct WishlistApp: App {
               !environment.repository.activeItems.isEmpty
         else { return }
         await environment.repository.refreshPrices()
+        guard environment.settings.notifiesPriceDrops else { return }
+        await environment.alerts.announce(environment.repository.lastPriceDrops)
     }
 }

@@ -24,6 +24,7 @@ extension View {
             .environment(environment.settings)
             .environment(environment.network)
             .environment(environment.router)
+            .environment(environment.alerts)
             .environment(\.productLookup, environment.lookup)
             .task { await environment.repository.load() }
     }

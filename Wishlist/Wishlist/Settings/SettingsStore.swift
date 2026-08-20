@@ -36,6 +36,17 @@ final class SettingsStore {
     var hapticsEnabled: Bool = true
     var sortOrder: WishlistSortOrder = .dateAddedDescending
 
+    // MARK: - Budget
+
+    /// What the user has to spend, as typed. Kept as text so an empty field
+    /// stays meaningfully empty rather than becoming zero.
+    var availableToSpendText: String = ""
+    var budgetCurrencyCode: String = SettingsStore.localCurrencyCode
+
+    // MARK: - Alerts
+
+    var notifiesPriceDrops: Bool = false
+
     // MARK: - Language model assistance (off unless turned on)
 
     var intelligenceProvider: IntelligenceProvider = .off
@@ -71,6 +82,10 @@ final class SettingsStore {
             .flatMap(WishlistSortOrder.init(rawValue:))
             ?? .dateAddedDescending
 
+        availableToSpendText = defaults.string(forKey: Key.availableToSpend) ?? ""
+        budgetCurrencyCode = defaults.string(forKey: Key.budgetCurrency) ?? SettingsStore.localCurrencyCode
+        notifiesPriceDrops = defaults.object(forKey: Key.notifiesPriceDrops) as? Bool ?? false
+
         intelligenceProvider = defaults.string(forKey: Key.intelligenceProvider)
             .flatMap(IntelligenceProvider.init(rawValue:))
             ?? .off
@@ -99,6 +114,16 @@ final class SettingsStore {
             allowsWebPageLookup: allowsWebPageLookup,
             intelligence: intelligence
         )
+    }
+
+    /// What the user has to spend, when they have said. `nil` means "not set",
+    /// which is different from zero and is shown differently.
+    var availableToSpend: Money? {
+        PriceParser.parse(availableToSpendText, currencyHint: budgetCurrencyCode)
+    }
+
+    static var localCurrencyCode: String {
+        Locale.current.currency?.identifier.uppercased() ?? "USD"
     }
 
     /// The language-model configuration, as a value the pipeline can carry.
@@ -148,6 +173,9 @@ final class SettingsStore {
             _ = readsDifficultPages
             _ = shortensTitles
             _ = suggestsCategories
+            _ = availableToSpendText
+            _ = budgetCurrencyCode
+            _ = notifiesPriceDrops
             _ = amazonMarketplace
             _ = allowsWebPageLookup
             _ = refreshOnLaunch
@@ -192,6 +220,9 @@ final class SettingsStore {
         defaults.set(confirmBeforeDeleting, forKey: Key.confirmDelete)
         defaults.set(hapticsEnabled, forKey: Key.haptics)
         defaults.set(sortOrder.rawValue, forKey: Key.sortOrder)
+        defaults.set(availableToSpendText, forKey: Key.availableToSpend)
+        defaults.set(budgetCurrencyCode, forKey: Key.budgetCurrency)
+        defaults.set(notifiesPriceDrops, forKey: Key.notifiesPriceDrops)
         defaults.set(intelligenceProvider.rawValue, forKey: Key.intelligenceProvider)
         defaults.set(claudeModel.rawValue, forKey: Key.claudeModel)
         defaults.set(groqModel, forKey: Key.groqModel)
@@ -222,6 +253,9 @@ final class SettingsStore {
         static let confirmDelete = "settings.confirmBeforeDeleting"
         static let haptics = "settings.hapticsEnabled"
         static let sortOrder = "settings.sortOrder"
+        static let availableToSpend = "settings.availableToSpend"
+        static let budgetCurrency = "settings.budgetCurrency"
+        static let notifiesPriceDrops = "settings.notifiesPriceDrops"
         static let intelligenceProvider = "settings.intelligenceProvider"
         static let claudeModel = "settings.claudeModel"
         static let groqModel = "settings.groqModel"

@@ -8,12 +8,16 @@
 
 import SwiftUI
 import Foundation
+import UIKit
+import UserNotifications
 import CoreTransferable
 import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(WishlistRepository.self) private var repository
+    @Environment(PriceAlertCenter.self) private var alerts
+    @Environment(\.openURL) private var openURL
 
     @State private var cacheSize: Int = 0
     @State private var isConfirmingItemDeletion = false
@@ -102,6 +106,43 @@ struct SettingsScreen: View {
                 }
 
                 Section {
+                    HStack {
+                        TextField(String(localized: "Amount"), text: $settings.availableToSpendText)
+                            .keyboardType(.decimalPad)
+                            .accessibilityLabel(Text("Amount available to spend"))
+                        Divider()
+                        Picker(String(localized: "Currency"), selection: $settings.budgetCurrencyCode) {
+                            ForEach(CurrencyOptions.including(settings.budgetCurrencyCode), id: \.self) { code in
+                                Text(code).tag(code)
+                            }
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(Text("Budget currency"))
+                    }
+                } header: {
+                    Text("Available to Spend")
+                } footer: {
+                    Text("Optional. When set, the wishlist shows what you have left and can filter to what fits. Wishlist never changes this figure for you — marking something obtained does not spend it.")
+                }
+
+                Section {
+                    Toggle(isOn: alertBinding) {
+                        Label(String(localized: "Price Drop Alerts"), systemImage: "bell")
+                    }
+                    if settings.notifiesPriceDrops, alerts.authorization == .denied {
+                        Button(String(localized: "Open iOS Settings")) {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                openURL(url)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Alerts")
+                } footer: {
+                    Text(alertFooter)
+                }
+
+                Section {
                     LabeledContent(String(localized: "Image Cache"), value: DateText.byteCount(cacheSize))
                     Button {
                         clearCache()
@@ -175,6 +216,26 @@ struct SettingsScreen: View {
     }
 
     // MARK: - Helpers
+
+    /// Turning the toggle on is what asks for permission — never a prompt at
+    /// launch for something the user has not yet said they want.
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { settings.notifiesPriceDrops },
+            set: { isOn in
+                settings.notifiesPriceDrops = isOn
+                guard isOn else { return }
+                Task { await alerts.requestAuthorization() }
+            }
+        )
+    }
+
+    private var alertFooter: String {
+        if settings.notifiesPriceDrops, alerts.authorization == .denied {
+            return String(localized: "Notifications are turned off for Wishlist in iOS Settings, so no alerts can be delivered.")
+        }
+        return String(localized: "Tells you when a refresh finds an item cheaper than when you last checked. Only for drops Wishlist has actually observed — never a prediction.")
+    }
 
     private var exportDocument: WishlistExport {
         WishlistExport(items: repository.items)

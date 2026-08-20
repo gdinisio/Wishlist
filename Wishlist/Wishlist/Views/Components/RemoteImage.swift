@@ -16,6 +16,9 @@ struct RemoteImage: View {
     var contentMode: ContentMode = .fill
     /// The largest dimension this image will be drawn at, in points.
     var maxPixelSize: CGFloat = 240
+    /// What sits behind the image. Clear for a full-screen viewer, where a
+    /// filled panel behind a fitted photo would read as a border.
+    var placeholderFill: Color = Color(.secondarySystemFill)
 
     @State private var image: UIImage?
     @State private var didFail = false
@@ -25,7 +28,7 @@ struct RemoteImage: View {
 
     var body: some View {
         Rectangle()
-            .fill(Color(.secondarySystemFill))
+            .fill(placeholderFill)
             .overlay {
                 if let image {
                     Image(uiImage: image)

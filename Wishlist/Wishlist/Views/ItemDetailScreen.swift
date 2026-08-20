@@ -23,6 +23,7 @@ struct ItemDetailScreen: View {
     @State private var refreshError: LookupError?
     @State private var isConfirmingDelete = false
     @State private var isDescriptionExpanded = false
+    @State private var isViewingImage = false
 
     var body: some View {
         Group {
@@ -82,6 +83,11 @@ struct ItemDetailScreen: View {
         .sheet(isPresented: $isEditing) {
             ItemEditorSheet(mode: .edit(item))
         }
+        .fullScreenCover(isPresented: $isViewingImage) {
+            if let url = item.imageURL {
+                ProductImageViewer(url: url, title: item.displayName)
+            }
+        }
         .confirmationDialog(
             Text("Delete “\(item.displayName)”?"),
             isPresented: $isConfirmingDelete,
@@ -111,11 +117,18 @@ struct ItemDetailScreen: View {
     private func heroSection(_ item: WishlistItem) -> some View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
-                RemoteImage(url: item.imageURL, contentMode: .fit, maxPixelSize: 520)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .accessibilityLabel(imageAccessibilityLabel(item))
+                Button {
+                    if item.imageURL != nil { isViewingImage = true }
+                } label: {
+                    RemoteImage(url: item.imageURL, contentMode: .fit, maxPixelSize: 520)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(item.imageURL == nil)
+                .accessibilityLabel(imageAccessibilityLabel(item))
+                .accessibilityHint(item.imageURL == nil ? Text("") : Text("Opens the photo full screen"))
 
                 VStack(alignment: .leading, spacing: 6) {
                     if let brand = item.brand, !brand.isEmpty {
@@ -164,6 +177,8 @@ struct ItemDetailScreen: View {
 
             AvailabilityBadge(availability: item.availability)
 
+            budgetStanding(item)
+
             if let error = refreshError {
                 InlineMessage(
                     symbolName: error.symbolName,
@@ -179,6 +194,29 @@ struct ItemDetailScreen: View {
         }
     }
 
+    /// Where this item sits against what the user has to spend. Shown only
+    /// when both a budget and a comparable price exist.
+    @ViewBuilder
+    private func budgetStanding(_ item: WishlistItem) -> some View {
+        if let budget = settings.availableToSpend, item.price != nil {
+            if let over = item.amountOver(budget) {
+                Label(
+                    String(localized: "\(over.formatted) more than you have to spend"),
+                    systemImage: "exclamationmark.circle"
+                )
+                .font(.subheadline)
+                .foregroundStyle(.orange)
+            } else if item.fits(within: budget) {
+                Label(
+                    String(localized: "Within your \(budget.formatted)"),
+                    systemImage: "checkmark.circle"
+                )
+                .font(.subheadline)
+                .foregroundStyle(.green)
+            }
+        }
+    }
+
     private func detailsSection(_ item: WishlistItem) -> some View {
         Section {
             if let retailer = item.displayRetailer {
@@ -186,6 +224,9 @@ struct ItemDetailScreen: View {
             }
             if let category = item.category, !category.isEmpty {
                 LabeledContent(String(localized: "Category"), value: category)
+            }
+            if let collection = item.collectionName, !collection.isEmpty {
+                LabeledContent(String(localized: "Collection"), value: collection)
             }
             // Shown whenever the displayed name is a shortened form, so the
             // store's own wording is never hidden.

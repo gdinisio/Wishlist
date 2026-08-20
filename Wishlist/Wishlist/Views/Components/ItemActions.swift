@@ -20,6 +20,15 @@ struct ItemActionsMenu: View {
     @Environment(WishlistRepository.self) private var repository
     @Environment(\.openURL) private var openURL
 
+    /// Writes straight through to the store, so the menu shows the current
+    /// membership with a checkmark and changing it is one tap.
+    private var collectionBinding: Binding<String?> {
+        Binding(
+            get: { item.collectionName },
+            set: { repository.setCollection($0, for: item.id) }
+        )
+    }
+
     var body: some View {
         Group {
             if item.isObtained {
@@ -40,6 +49,24 @@ struct ItemActionsMenu: View {
                 onEdit()
             } label: {
                 Label(String(localized: "Edit Details"), systemImage: "pencil")
+            }
+
+            // Only once collections exist — the editor is where the first one
+            // gets made, and an empty submenu would be a dead end.
+            if !repository.collectionNames.isEmpty {
+                Menu {
+                    Picker(selection: collectionBinding) {
+                        Text("None").tag(String?.none)
+                        ForEach(repository.collectionNames, id: \.self) { name in
+                            Text(name).tag(String?.some(name))
+                        }
+                    } label: {
+                        Text("Collection")
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(String(localized: "Collection"), systemImage: "folder")
+                }
             }
 
             if let url = item.productURL {
