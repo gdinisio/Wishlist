@@ -22,7 +22,6 @@ final class SettingsStore {
     var amazonAccessKey: String = ""
     var amazonSecretKey: String = ""
     var amazonPartnerTag: String = ""
-    var rainforestKey: String = ""
     var microlinkKey: String = ""
 
     // MARK: - Preferences (stored in user defaults)
@@ -46,7 +45,6 @@ final class SettingsStore {
         amazonAccessKey = keychain.string(forKey: CredentialKey.amazonAccessKey) ?? ""
         amazonSecretKey = keychain.string(forKey: CredentialKey.amazonSecretKey) ?? ""
         amazonPartnerTag = keychain.string(forKey: CredentialKey.amazonPartnerTag) ?? ""
-        rainforestKey = keychain.string(forKey: CredentialKey.rainforestKey) ?? ""
         microlinkKey = keychain.string(forKey: CredentialKey.microlinkKey) ?? ""
 
         amazonMarketplace = defaults.string(forKey: Key.marketplace)
@@ -73,23 +71,21 @@ final class SettingsStore {
             amazonSecretKey: amazonSecretKey,
             amazonPartnerTag: amazonPartnerTag,
             amazonMarketplace: amazonMarketplace,
-            rainforestKey: rainforestKey,
             microlinkKey: microlinkKey,
             allowsWebPageLookup: allowsWebPageLookup
         )
     }
 
-    /// True when at least one keyed provider is set up. Drives the gentle hint
-    /// on the Add screen instead of an error after the fact.
+    /// True when the Amazon API is set up. Drives the gentle hint on the Add
+    /// screen instead of an error after the fact.
     var hasAnyAPIKey: Bool {
-        credentials.hasAmazonPAAPI || credentials.hasRainforest
+        credentials.hasAmazonPAAPI
     }
 
     func clearAllCredentials() {
         amazonAccessKey = ""
         amazonSecretKey = ""
         amazonPartnerTag = ""
-        rainforestKey = ""
         microlinkKey = ""
     }
 
@@ -102,7 +98,6 @@ final class SettingsStore {
             _ = amazonAccessKey
             _ = amazonSecretKey
             _ = amazonPartnerTag
-            _ = rainforestKey
             _ = microlinkKey
             _ = amazonMarketplace
             _ = allowsWebPageLookup
@@ -138,7 +133,6 @@ final class SettingsStore {
         keychain.set(amazonAccessKey, forKey: CredentialKey.amazonAccessKey)
         keychain.set(amazonSecretKey, forKey: CredentialKey.amazonSecretKey)
         keychain.set(amazonPartnerTag, forKey: CredentialKey.amazonPartnerTag)
-        keychain.set(rainforestKey, forKey: CredentialKey.rainforestKey)
         keychain.set(microlinkKey, forKey: CredentialKey.microlinkKey)
 
         defaults.set(amazonMarketplace.rawValue, forKey: Key.marketplace)

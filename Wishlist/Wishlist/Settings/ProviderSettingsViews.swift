@@ -102,7 +102,7 @@ struct AmazonSettingsView: View {
             } header: {
                 Text("Credentials")
             } footer: {
-                Text("From your Amazon Associates account, under Tools ▸ Product Advertising API. The partner tag is your Associates store ID.")
+                Text("Free to use — Amazon charges nothing per request. You do need an approved Amazon Associates account: sign up, then find these under Tools ▸ Product Advertising API. The partner tag is your Associates store ID.")
             }
 
             Section {
@@ -127,7 +127,7 @@ struct AmazonSettingsView: View {
 
                 ConnectionResultView(outcome: tester.outcome)
             } footer: {
-                Text("Sends one search request to check the credentials.")
+                Text("Sends one search request to check the credentials. No charge.")
             }
         }
         .navigationTitle(Text("Amazon"))
@@ -140,55 +140,6 @@ struct AmazonSettingsView: View {
         Task {
             await tester.test(
                 provider: AmazonPAAPIProvider(http: URLSessionHTTPClient()),
-                request: LookupRequest(link: nil, searchTerm: "wireless headphones"),
-                credentials: credentials
-            )
-        }
-    }
-}
-
-// MARK: - Rainforest
-
-struct RainforestSettingsView: View {
-    @Environment(SettingsStore.self) private var settings
-    @State private var tester = ConnectionTester()
-
-    var body: some View {
-        @Bindable var settings = settings
-
-        Form {
-            Section {
-                SecureField(String(localized: "API Key"), text: $settings.rainforestKey)
-                    .textContentType(.password)
-            } header: {
-                Text("Credentials")
-            } footer: {
-                Text("Rainforest returns Amazon product data without Associates credentials. Get a key at rainforestapi.com.")
-            }
-
-            Section {
-                Button {
-                    runTest()
-                } label: {
-                    Label(String(localized: "Test Connection"), systemImage: "checkmark.seal")
-                }
-                .disabled(!settings.credentials.hasRainforest || tester.outcome == .testing)
-
-                ConnectionResultView(outcome: tester.outcome)
-            } footer: {
-                Text("Sends one search request to check the key. Rainforest bills per request.")
-            }
-        }
-        .navigationTitle(Text("Rainforest"))
-        .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: settings.rainforestKey) { _, _ in tester.reset() }
-    }
-
-    private func runTest() {
-        let credentials = settings.credentials
-        Task {
-            await tester.test(
-                provider: RainforestProvider(http: URLSessionHTTPClient()),
                 request: LookupRequest(link: nil, searchTerm: "wireless headphones"),
                 credentials: credentials
             )
@@ -211,7 +162,7 @@ struct MicrolinkSettingsView: View {
             } header: {
                 Text("Credentials")
             } footer: {
-                Text("Microlink recovers a name and picture from pages that refuse to be read directly. It works without a key on a small free allowance; adding one raises the limit.")
+                Text("Microlink recovers a name and picture from pages that refuse to be read directly. Wishlist uses its free tier, which needs no key and allows a small number of lookups per day. Leave this empty unless you already pay for a Microlink plan.")
             }
         }
         .navigationTitle(Text("Microlink"))

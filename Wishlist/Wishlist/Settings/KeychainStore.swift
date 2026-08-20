@@ -90,8 +90,12 @@ nonisolated enum CredentialKey {
     static let amazonAccessKey = "amazon.accessKey"
     static let amazonSecretKey = "amazon.secretKey"
     static let amazonPartnerTag = "amazon.partnerTag"
-    static let rainforestKey = "rainforest.apiKey"
+    /// No longer written to. Kept so "Remove Saved API Keys" still clears a
+    /// value stored by an earlier build.
+    static let legacyRainforestKey = "rainforest.apiKey"
     static let microlinkKey = "microlink.apiKey"
 
-    static let all = [amazonAccessKey, amazonSecretKey, amazonPartnerTag, rainforestKey, microlinkKey]
+    static let all = [
+        amazonAccessKey, amazonSecretKey, amazonPartnerTag, microlinkKey, legacyRainforestKey
+    ]
 }

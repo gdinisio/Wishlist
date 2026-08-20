@@ -35,18 +35,7 @@ struct SettingsScreen: View {
                             isConfigured: settings.credentials.hasAmazonPAAPI,
                             detail: settings.credentials.hasAmazonPAAPI
                                 ? settings.amazonMarketplace.displayName
-                                : nil
-                        )
-                    }
-
-                    NavigationLink {
-                        RainforestSettingsView()
-                    } label: {
-                        ProviderRow(
-                            title: String(localized: "Rainforest"),
-                            symbolName: "leaf",
-                            isConfigured: settings.credentials.hasRainforest,
-                            detail: nil
+                                : String(localized: "Optional")
                         )
                     }
 
@@ -63,7 +52,7 @@ struct SettingsScreen: View {
                 } header: {
                     Text("Product Lookup")
                 } footer: {
-                    Text("Wishlist tries these in order: Amazon for Amazon links, then the store’s own product page, then Microlink for pages that refuse to be read. Keys are stored in your device’s Keychain and are only ever sent to the service they belong to.")
+                    Text("Every service Wishlist uses is free. It tries them in order: Amazon’s own API for Amazon links, then the store’s product page, then Microlink for pages that refuse to be read. Only the Amazon API needs a key, and it works without one. Keys are stored in your device’s Keychain and are only ever sent to the service they belong to.")
                 }
 
                 Section {
@@ -71,7 +60,7 @@ struct SettingsScreen: View {
                         Label(String(localized: "Read Product Pages"), systemImage: "doc.text.magnifyingglass")
                     }
                 } footer: {
-                    Text("Reads the details a store publishes on its own product page. Needs no key, and works for stores Wishlist has no API for.")
+                    Text("Reads the details a store publishes on its own product page, including Amazon’s. Free, needs no key, and works for stores Wishlist has no API for.")
                 }
 
                 Section {

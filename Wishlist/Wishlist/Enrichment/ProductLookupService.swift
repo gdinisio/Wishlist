@@ -58,15 +58,14 @@ nonisolated final class ProductLookupService: Sendable {
         self.providers = providers
     }
 
-    /// The chain used by the app: Amazon's own API first for Amazon links, then
-    /// the Amazon data API, then the product page itself, then a rendering
-    /// service for pages that refuse to be read directly.
+    /// The chain used by the app, and every step of it is free to use: Amazon's
+    /// own API first for Amazon links, then the store's product page, then a
+    /// rendering service for pages that refuse to be read directly.
     static func makeDefault(http: HTTPClient = URLSessionHTTPClient()) -> ProductLookupService {
         ProductLookupService(
             http: http,
             providers: [
                 AmazonPAAPIProvider(http: http),
-                RainforestProvider(http: http),
                 WebPageProvider(http: http),
                 MicrolinkProvider(http: http)
             ]

@@ -213,6 +213,101 @@ nonisolated enum HTMLParser {
         return attributes
     }
 
+    // MARK: - Element lookup
+    //
+    // Enough of a DOM to pull a named element's text or attribute out of a page
+    // that publishes no structured data. Not a parser — a targeted reader.
+
+    /// Text content of the first element carrying `id="<id>"`.
+    static func elementText(id: String, in html: String, limit: Int = 1200) -> String? {
+        guard let found = openTag(id: id, in: html) else { return nil }
+        return text(insideTag: found.range, named: found.name, in: html, limit: limit)
+    }
+
+    /// Value of one attribute on the first element carrying `id="<id>"`.
+    static func elementAttribute(_ attribute: String, id: String, in html: String) -> String? {
+        guard let found = openTag(id: id, in: html) else { return nil }
+        let inner = html[html.index(after: found.range.lowerBound)..<html.index(before: found.range.upperBound)]
+        let value = parseAttributes(in: inner)[attribute.lowercased()]
+        return (value?.isEmpty ?? true) ? nil : value
+    }
+
+    /// Text of the first element whose opening tag contains `needle`, searching
+    /// only after `marker` when one is given — which is how a price is found
+    /// inside a specific block rather than anywhere on the page.
+    static func firstElementText(
+        containing needle: String,
+        in html: String,
+        after marker: String? = nil,
+        limit: Int = 400
+    ) -> String? {
+        var searchStart = html.startIndex
+        if let marker {
+            guard let markerRange = html.range(of: marker) else { return nil }
+            searchStart = markerRange.upperBound
+        }
+        guard let match = html.range(of: needle, range: searchStart..<html.endIndex),
+              let tag = enclosingTag(of: match, in: html)
+        else { return nil }
+        return text(insideTag: tag, named: tagName(in: html[tag]), in: html, limit: limit)
+    }
+
+    private static func text(
+        insideTag tag: Range<String.Index>,
+        named name: String,
+        in html: String,
+        limit: Int
+    ) -> String? {
+        let contentStart = tag.upperBound
+        let windowEnd = html.index(contentStart, offsetBy: limit, limitedBy: html.endIndex) ?? html.endIndex
+        guard contentStart < windowEnd else { return nil }
+
+        var contentEnd = windowEnd
+        if !name.isEmpty,
+           let close = html.range(of: "</" + name, options: .caseInsensitive, range: contentStart..<windowEnd) {
+            contentEnd = close.lowerBound
+        }
+        let text = plainText(from: String(html[contentStart..<contentEnd]))
+        return text.isEmpty ? nil : text
+    }
+
+    private static func openTag(id: String, in html: String) -> (range: Range<String.Index>, name: String)? {
+        for quote in ["\"", "'"] {
+            guard let match = html.range(of: "id=" + quote + id + quote),
+                  let tag = enclosingTag(of: match, in: html)
+            else { continue }
+            return (tag, tagName(in: html[tag]))
+        }
+        return nil
+    }
+
+    /// Expands a match outwards to the `<...>` that encloses it.
+    private static func enclosingTag(of match: Range<String.Index>, in html: String) -> Range<String.Index>? {
+        var start = match.lowerBound
+        while start > html.startIndex {
+            start = html.index(before: start)
+            if html[start] == ">" { return nil }
+            if html[start] == "<" {
+                guard let close = html.range(of: ">", range: match.upperBound..<html.endIndex) else {
+                    return nil
+                }
+                return start..<close.upperBound
+            }
+        }
+        return nil
+    }
+
+    private static func tagName(in tag: Substring) -> String {
+        var name = ""
+        var index = tag.startIndex
+        if index < tag.endIndex, tag[index] == "<" { index = tag.index(after: index) }
+        while index < tag.endIndex, tag[index].isLetter || tag[index].isNumber {
+            name.append(tag[index])
+            index = tag.index(after: index)
+        }
+        return name.lowercased()
+    }
+
     // MARK: - Entities
 
     private static let namedEntities: [String: String] = [

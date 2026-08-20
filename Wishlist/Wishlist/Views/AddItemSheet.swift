@@ -216,8 +216,8 @@ struct AddItemSheet: View {
             Section {
                 InlineMessage(
                     symbolName: "info.circle",
-                    title: String(localized: "Amazon Prices Need a Key"),
-                    message: String(localized: "Wishlist will still read the page. Add an Amazon key in Settings for reliable prices."),
+                    title: String(localized: "Reading the Amazon Page"),
+                    message: String(localized: "This works, but Amazon sometimes blocks it. Amazon’s own API is free and more reliable — set it up in Settings."),
                     tint: .secondary
                 )
                 Button(String(localized: "Open Settings")) {

@@ -35,7 +35,6 @@ nonisolated struct LookupCredentials: Sendable, Equatable {
     var amazonSecretKey: String?
     var amazonPartnerTag: String?
     var amazonMarketplace: AmazonMarketplace = .unitedKingdom
-    var rainforestKey: String?
     var microlinkKey: String?
     /// Reading the product page directly needs no key, so it is on by default.
     var allowsWebPageLookup: Bool = true
@@ -43,8 +42,6 @@ nonisolated struct LookupCredentials: Sendable, Equatable {
     var hasAmazonPAAPI: Bool {
         isPresent(amazonAccessKey) && isPresent(amazonSecretKey) && isPresent(amazonPartnerTag)
     }
-
-    var hasRainforest: Bool { isPresent(rainforestKey) }
 
     private func isPresent(_ value: String?) -> Bool {
         guard let value else { return false }

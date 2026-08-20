@@ -29,9 +29,13 @@ reduced to their ASIN), identify the retailer, then run a provider chain that
 merges results field by field and stops once the snapshot is complete:
 
 1. Amazon Product Advertising API v5 — AWS SigV4 signed on device, 21 storefronts
-2. Rainforest API — Amazon data without Associates credentials
-3. The product page's own schema.org JSON-LD and Open Graph data — no key needed
-4. Microlink — last resort for pages that refuse to be read directly
+2. The product page itself — schema.org JSON-LD and Open Graph, plus Amazon's
+   own markup for the pages that publish neither
+3. Microlink — last resort for pages that refuse to be read directly
+
+Every provider is free to use, and the app works with no keys configured at all.
+The Amazon API is free of charge but needs an approved Associates account; the
+other two need no key.
 
 Every failure becomes a `LookupError` with a human title, a sentence of guidance
 and a next step. Raw API errors never reach the user, and no field is ever

@@ -43,12 +43,23 @@ nonisolated struct WebPageProvider: ProductDataProvider {
             contentType = response.headerValue("Content-Type")
         }
 
-        let document = HTMLParser.parse(body, contentTypeHeader: contentType)
-        let snapshot = StructuredDataParser.parse(
+        // Decoded once, then read twice: the generic structured-data pass, and
+        // for Amazon its own markup, which is the only thing on those pages
+        // that actually carries a price.
+        let html = HTMLParser.decode(body, contentTypeHeader: contentType)
+        let document = HTMLParser.parse(html)
+
+        var snapshot = StructuredDataParser.parse(
             document: document,
             link: link,
             sourceName: displayName
         )
+        if link.isAmazon {
+            snapshot = snapshot.merging(
+                AmazonPageParser.snapshot(from: html, link: link, sourceName: displayName)
+            )
+        }
+
         guard !snapshot.isEmpty else { throw LookupError.noProductData }
         return snapshot
     }

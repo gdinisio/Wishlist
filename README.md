@@ -18,28 +18,33 @@ Wishlist works out of the box with no keys at all, and gets better with them.
 All configuration lives in **Settings**, and keys are stored in the iOS Keychain,
 so they are entered once and never asked for again.
 
-| Provider | Key needed | What it does | Where to get it |
+| Provider | Cost | Key needed | What it does |
 | --- | --- | --- | --- |
-| **Product page** | None | Reads the structured data (schema.org JSON‑LD, Open Graph) that stores already publish. Works for most retailers. | Built in, on by default |
-| **Amazon Product Advertising API** | Access key, secret key, partner tag | Authoritative Amazon prices, stock and images. Requests are signed with AWS Signature V4 on device. | Amazon Associates → Tools → Product Advertising API |
-| **Rainforest** | API key | Amazon product data without Associates credentials — the practical option if you can't get PA‑API access. | [rainforestapi.com](https://www.rainforestapi.com) |
-| **Microlink** | Optional key | Last-resort fallback for pages that refuse to be read directly; recovers a name and picture. | [microlink.io](https://microlink.io) |
+| **Product page** | Free | None | Reads the structured data (schema.org JSON‑LD, Open Graph) that stores already publish, plus Amazon's own page markup. Works for most retailers. |
+| **Amazon Product Advertising API** | Free — Amazon charges nothing per request | Access key, secret key, partner tag | Authoritative Amazon prices, stock and images. Requests are signed with AWS Signature V4 on device. Needs an approved [Amazon Associates](https://affiliate-program.amazon.com) account. |
+| **Microlink** | Free tier, no key | None | Last-resort fallback for pages that refuse to be read directly; recovers a name and picture. A paid key can be added but is never required. |
 
-For an Amazon link the chain runs **PA‑API → Rainforest → product page →
-Microlink**, merging results field by field, and stops as soon as it has
-everything. For any other retailer it goes straight to the product page.
+**Every service Wishlist uses is free**, and the app is fully functional with no
+keys at all. Nothing here bills per request.
 
-Each provider screen has a **Test Connection** button that sends one real
-request, so you find out immediately whether a key works.
+For an Amazon link the chain runs **PA‑API → product page → Microlink**, merging
+results field by field, and stops as soon as it has everything. For any other
+retailer it goes straight to the product page.
 
-### Which one should I start with?
+The Amazon settings screen has a **Test Connection** button that sends one real
+request, so you find out immediately whether the credentials work.
 
-If you buy mostly from Amazon and can get Associates credentials, use the
-**Product Advertising API** — it is the only source that stays correct when
-Amazon changes its page markup, and it costs nothing. If you can't (it requires
-an approved Associates account with qualifying sales), add a **Rainforest** key
-instead. With neither, everything still works — Amazon product pages are just
-less reliable to read than most other retailers'.
+### Do I need to set anything up?
+
+No. Out of the box Wishlist reads product pages directly, including Amazon's,
+and that covers most retailers.
+
+The one worthwhile addition is the **Amazon Product Advertising API**. It costs
+nothing, and it is the only Amazon source that stays correct when Amazon changes
+its page markup or serves a bot check instead of a product page. The catch is
+eligibility rather than money: it requires an approved Amazon Associates
+account, and Amazon expects qualifying sales to keep API access active. If you
+can't get it, the free page reader still handles Amazon — just less reliably.
 
 ---
 
@@ -55,8 +60,9 @@ Views (SwiftUI)
        └─ ProductLookupService the API chain
             ├─ URLValidator          validate, de-track, canonicalise, extract ASIN
             ├─ RetailerIdentifier    host → store
-            ├─ ProductDataProvider   protocol → Amazon PA-API | Rainforest | Product page | Microlink
+            ├─ ProductDataProvider   protocol → Amazon PA-API | Product page | Microlink
             ├─ StructuredDataParser  JSON-LD + Open Graph → ProductSnapshot
+            ├─ AmazonPageParser      Amazon's own markup, for pages without JSON-LD
             └─ ProductSnapshot       normalised model, merged across providers
   └─ ImageLoader               coalesced downloads, downsampled decode, memory + disk cache
   └─ SettingsStore             preferences in defaults, credentials in the Keychain
