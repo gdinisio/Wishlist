@@ -6,8 +6,13 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		16E6D1F530386EA80028A8A5 /* Wishlist.icon in Resources */ = {isa = PBXBuildFile; fileRef = 16E6D1F430386EA80028A8A5 /* Wishlist.icon */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		163FD1F630371D19007B2CBA /* Wishlist.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wishlist.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		16E6D1F430386EA80028A8A5 /* Wishlist.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Wishlist.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -30,6 +35,7 @@
 		163FD1ED30371D19007B2CBA = {
 			isa = PBXGroup;
 			children = (
+				16E6D1F430386EA80028A8A5 /* Wishlist.icon */,
 				163FD1F830371D19007B2CBA /* Wishlist */,
 				163FD1F730371D19007B2CBA /* Products */,
 			);
@@ -102,6 +108,7 @@
 		163FD1F430371D19007B2CBA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				16E6D1F530386EA80028A8A5 /* Wishlist.icon in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -239,7 +246,7 @@
 		163FD20230371D1A007B2CBA /* Debug configuration for PBXNativeTarget "Wishlist" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Wishlist;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -271,7 +278,7 @@
 		163FD20330371D1A007B2CBA /* Release configuration for PBXNativeTarget "Wishlist" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Wishlist;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
