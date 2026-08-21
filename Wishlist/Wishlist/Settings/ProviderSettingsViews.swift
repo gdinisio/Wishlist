@@ -28,9 +28,12 @@ final class ConnectionTester {
         outcome = .idle
     }
 
-    /// A deliberately trivial round trip: the model must return one fixed
-    /// value into a schema. It proves the key, the model name and the network
-    /// path without spending anything meaningful.
+    /// A deliberately trivial round trip. What is being tested is the key, the
+    /// model name and the network path — so any well-formed JSON object coming
+    /// back is a pass. Only Claude's tool calling enforces a schema
+    /// server-side; Groq's JSON mode guarantees valid JSON and nothing about
+    /// what is in it, so insisting on a particular value would fail a
+    /// connection that works perfectly.
     func test(model client: any LanguageModelClient) async {
         outcome = .testing
         let function = LanguageModelFunction(
@@ -52,10 +55,13 @@ final class ConnectionTester {
                 function: function,
                 maxTokens: 64
             )
-            if answer?["status"]?.stringValue == "ready" {
-                outcome = .success(client.displayName)
+            if answer?.objectValue != nil {
+                outcome = .success(nil)
             } else {
-                outcome = .failure(.providerUnavailable(provider: client.displayName))
+                outcome = .failure(.providerRejected(
+                    provider: client.displayName,
+                    detail: String(localized: "The model answered, but not with the JSON it was asked for. Try a different model.")
+                ))
             }
         } catch let error as LookupError {
             outcome = .failure(error)

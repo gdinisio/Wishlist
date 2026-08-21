@@ -68,7 +68,10 @@ nonisolated struct GroqClient: LanguageModelClient {
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.setValue("Bearer " + apiKey, forHTTPHeaderField: "Authorization")
 
-        let response = try await http.send(request, provider: displayName)
+        let response = try await http.sendAllowingHTTPError(request, provider: displayName)
+        guard (200...299).contains(response.statusCode) else {
+            throw LanguageModelFailure.from(response, provider: displayName)
+        }
         guard let json = JSONValue.parse(response.data),
               let content = json.value(at: "choices.0.message.content")?.stringValue,
               let payload = JSONValue.parse(Data(content.utf8))

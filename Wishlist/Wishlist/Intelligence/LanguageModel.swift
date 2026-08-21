@@ -112,6 +112,32 @@ nonisolated protocol LanguageModelClient: Sendable {
     ) async throws -> JSONValue?
 }
 
+/// Turns a model service's non-2xx reply into an error that carries the
+/// service's own explanation. A wrong model name, an expired plan or a
+/// malformed request each say something specific, and repeating that verbatim
+/// is far more use than anything generic written here.
+nonisolated enum LanguageModelFailure {
+    static func from(_ response: HTTPResponse, provider: String) -> LookupError {
+        switch response.statusCode {
+        case 401, 403:
+            return .notAuthorized(provider: provider)
+        case 429:
+            let retryAfter = response.headerValue("Retry-After").flatMap(TimeInterval.init)
+            return .rateLimited(retryAfter: retryAfter)
+        default:
+            return .providerRejected(provider: provider, detail: message(in: response.data))
+        }
+    }
+
+    /// Anthropic and Groq both nest their explanation under `error.message`.
+    private static func message(in data: Data) -> String? {
+        guard let json = JSONValue.parse(data),
+              let text = json.value(at: "error.message")?.stringValue
+        else { return nil }
+        return text
+    }
+}
+
 /// Picks the client the user configured. Returns `nil` when the feature is off
 /// or unconfigured, which is how every call site short-circuits.
 nonisolated struct LanguageModelRouter: Sendable {

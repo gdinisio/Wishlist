@@ -25,6 +25,10 @@ nonisolated enum LookupError: Error, Equatable, Sendable {
     case notFound
     /// The provider answered, but with nothing we could use.
     case noProductData
+    /// The service answered with a refusal it explained itself — a bad model
+    /// name, a malformed request, a plan limit. `detail` is the service's own
+    /// wording, which is nearly always more useful than ours.
+    case providerRejected(provider: String, detail: String?)
     /// Anything else: transport failures, malformed responses, 5xx.
     case providerUnavailable(provider: String?)
     /// No provider is able to handle this request at all.
@@ -45,6 +49,7 @@ nonisolated extension LookupError {
         case .notAuthorized: String(localized: "Check your API key")
         case .notFound: String(localized: "Product not found")
         case .noProductData: String(localized: "No details found")
+        case .providerRejected(let provider, _): String(localized: "\(provider) refused the request")
         case .providerUnavailable: String(localized: "Lookup unavailable")
         case .noProviderConfigured: String(localized: "No lookup service available")
         case .cancelled: String(localized: "Cancelled")
@@ -76,6 +81,11 @@ nonisolated extension LookupError {
             return String(localized: "This product may have been removed, or the link may have expired.")
         case .noProductData:
             return String(localized: "The page didn’t include product information Wishlist can read. Add the item and fill in what you know.")
+        case .providerRejected(_, let detail):
+            if let detail, !detail.isEmpty {
+                return detail
+            }
+            return String(localized: "The service understood the request but would not carry it out. Check the settings for it.")
         case .providerUnavailable:
             return String(localized: "The store or lookup service isn’t responding right now. Try again in a moment.")
         case .noProviderConfigured:
@@ -93,6 +103,7 @@ nonisolated extension LookupError {
         case .rateLimited: "hourglass"
         case .notAuthorized, .noProviderConfigured: "key.slash"
         case .notFound, .noProductData: "magnifyingglass"
+        case .providerRejected: "exclamationmark.triangle"
         case .providerUnavailable: "exclamationmark.triangle"
         case .cancelled: "xmark.circle"
         }
@@ -103,14 +114,14 @@ nonisolated extension LookupError {
         switch self {
         case .timedOut, .rateLimited, .providerUnavailable, .offline: true
         case .invalidURL, .unsupportedURL, .notAuthorized, .notFound,
-             .noProductData, .noProviderConfigured, .cancelled: false
+             .noProductData, .noProviderConfigured, .cancelled, .providerRejected: false
         }
     }
 
     /// Whether the sensible next step is to open Settings.
     var suggestsSettings: Bool {
         switch self {
-        case .notAuthorized, .noProviderConfigured: true
+        case .notAuthorized, .noProviderConfigured, .providerRejected: true
         default: false
         }
     }

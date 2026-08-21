@@ -23,7 +23,12 @@ nonisolated struct HTTPResponse: Sendable {
 /// Injected wherever the network is needed, so providers can be exercised
 /// against a stub without touching URLSession.
 nonisolated protocol HTTPClient: Sendable {
+    /// Sends a request, turning any non-2xx status into a `LookupError`.
     func send(_ request: URLRequest, provider: String) async throws -> HTTPResponse
+    /// Sends a request and returns the response whatever its status, so a
+    /// caller can read the service's own explanation out of an error body.
+    /// Transport failures still throw.
+    func sendAllowingHTTPError(_ request: URLRequest, provider: String) async throws -> HTTPResponse
 }
 
 nonisolated struct URLSessionHTTPClient: HTTPClient {
@@ -53,6 +58,25 @@ nonisolated struct URLSessionHTTPClient: HTTPClient {
     }
 
     func send(_ request: URLRequest, provider: String) async throws -> HTTPResponse {
+        let result = try await sendAllowingHTTPError(request, provider: provider)
+        switch result.statusCode {
+        case 200...299:
+            return result
+        case 401, 403:
+            throw LookupError.notAuthorized(provider: provider)
+        case 404, 410:
+            throw LookupError.notFound
+        case 408:
+            throw LookupError.timedOut
+        case 429:
+            let retryAfter = result.headerValue("Retry-After").flatMap(TimeInterval.init)
+            throw LookupError.rateLimited(retryAfter: retryAfter)
+        default:
+            throw LookupError.providerUnavailable(provider: provider)
+        }
+    }
+
+    func sendAllowingHTTPError(_ request: URLRequest, provider: String) async throws -> HTTPResponse {
         let data: Data
         let response: URLResponse
         do {
@@ -80,28 +104,12 @@ nonisolated struct URLSessionHTTPClient: HTTPClient {
             }
         }
 
-        let result = HTTPResponse(
+        return HTTPResponse(
             data: data,
             statusCode: http.statusCode,
             headers: headers,
             url: http.url
         )
-
-        switch http.statusCode {
-        case 200...299:
-            return result
-        case 401, 403:
-            throw LookupError.notAuthorized(provider: provider)
-        case 404, 410:
-            throw LookupError.notFound
-        case 408:
-            throw LookupError.timedOut
-        case 429:
-            let retryAfter = result.headerValue("Retry-After").flatMap(TimeInterval.init)
-            throw LookupError.rateLimited(retryAfter: retryAfter)
-        default:
-            throw LookupError.providerUnavailable(provider: provider)
-        }
     }
 }
 

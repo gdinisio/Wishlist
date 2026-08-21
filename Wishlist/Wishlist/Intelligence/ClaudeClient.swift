@@ -71,7 +71,10 @@ nonisolated struct ClaudeClient: LanguageModelClient {
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue(Self.apiVersion, forHTTPHeaderField: "anthropic-version")
 
-        let response = try await http.send(request, provider: displayName)
+        let response = try await http.sendAllowingHTTPError(request, provider: displayName)
+        guard (200...299).contains(response.statusCode) else {
+            throw LanguageModelFailure.from(response, provider: displayName)
+        }
         guard let json = JSONValue.parse(response.data) else {
             throw LookupError.providerUnavailable(provider: displayName)
         }

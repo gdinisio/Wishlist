@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.3 — Fix the Groq connection test, and say why things fail
+
+- **The connection test rejected working Groq keys.** It required the model to
+  reply with the exact string `"ready"`. Claude's tool calling enforces a schema
+  server-side so it always did; Groq's JSON mode guarantees *valid JSON* and
+  nothing about its contents, so a perfectly good `{"status":"Ready"}` was
+  reported as a failure. The test now checks what it was actually meant to
+  check — that a well-formed object came back at all.
+- **Failures now repeat the service's own explanation.** Model clients read the
+  error body instead of collapsing every non-2xx into a generic message, via a
+  new `HTTPClient.sendAllowingHTTPError` and a `LookupError.providerRejected`
+  case. A retired Groq model previously surfaced as "Product not found — this
+  product may have been removed", which is nonsense under an API key field. It
+  now says what Groq said.
+- The Groq settings footer notes that Groq retires model IDs periodically, since
+  a stale ID is the most likely reason a valid key appears not to work.
+
+## 2.2 — App icon
+
+- iOS 27 app icon (added directly in Xcode).
+
 ## 2.1 — First build fixes
 
 - `AppEnvironment`'s injectable dependencies are optional parameters resolved in
