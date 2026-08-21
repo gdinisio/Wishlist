@@ -64,6 +64,43 @@ nonisolated struct ClaudeClient: LanguageModelClient {
             "tool_choice": ["type": "tool", "name": .string(function.name)]
         ]
 
+        guard let json = try await perform(body) else { return nil }
+
+        for block in json["content"]?.arrayValue ?? [] where block["type"]?.stringValue == "tool_use" {
+            if let input = block["input"] { return input }
+        }
+        return nil
+    }
+
+    func reply(system: String, turns: [ChatTurn], maxTokens: Int) async throws -> String? {
+        guard !apiKey.isEmpty else { throw LookupError.notAuthorized(provider: displayName) }
+        guard !turns.isEmpty else { return nil }
+
+        let body: JSONValue = [
+            "model": .string(model),
+            "max_tokens": .number(Double(maxTokens)),
+            // Advice deserves more room to think than reading a page does.
+            "output_config": ["effort": "medium"],
+            "system": .string(system),
+            "messages": .array(turns.map { turn in
+                ["role": .string(turn.role.rawValue), "content": .string(turn.text)]
+            })
+        ]
+
+        guard let json = try await perform(body) else { return nil }
+
+        let text = (json["content"]?.arrayValue ?? [])
+            .filter { $0["type"]?.stringValue == "text" }
+            .compactMap { $0["text"]?.stringValue }
+            .joined(separator: "\n\n")
+        return text.isEmpty ? nil : text
+    }
+
+    /// Sends a Messages request and returns the parsed body, or `nil` when the
+    /// model declined. A safety decline arrives as a 200 with a "refusal" stop
+    /// reason, not as an error — there is nothing to salvage, and nothing to
+    /// apologise for.
+    private func perform(_ body: JSONValue) async throws -> JSONValue? {
         var request = URLRequest(url: Self.endpoint)
         request.httpMethod = "POST"
         request.httpBody = try body.encoded()
@@ -78,14 +115,7 @@ nonisolated struct ClaudeClient: LanguageModelClient {
         guard let json = JSONValue.parse(response.data) else {
             throw LookupError.providerUnavailable(provider: displayName)
         }
-
-        // A safety decline arrives as a 200 with this stop reason, not as an
-        // error. There is nothing to salvage, and nothing to apologise for.
         if json["stop_reason"]?.stringValue == "refusal" { return nil }
-
-        for block in json["content"]?.arrayValue ?? [] where block["type"]?.stringValue == "tool_use" {
-            if let input = block["input"] { return input }
-        }
-        return nil
+        return json
     }
 }

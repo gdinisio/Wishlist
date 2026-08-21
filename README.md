@@ -81,10 +81,32 @@ language model does not get to change that. Three things enforce it:
 Categories are the one suggestion rather than a lifted fact — they come from a
 fixed list of 26, and are labelled as suggestions in Settings.
 
+### Asking about products
+
+The assistant also answers questions — alternatives, whether a price looks
+reasonable, what to check before buying — from an item's menu ("Ask About
+This") or the wishlist menu ("Ask the Assistant").
+
+This is a **different contract** from page reading, and the code treats it as
+one. Extraction reports facts about a page and every value is verified before
+the app believes it. Advice cannot be verified, so instead:
+
+- The model is told plainly that it cannot browse, cannot check a live price
+  and must never claim something is in stock or on sale.
+- It is grounded in what the app has actually observed for that item — the
+  price it saw and when, the price when you added it, the stock status it last
+  read — so "is this a good price?" reasons from real data.
+- Nothing it says is ever written into an item. The conversation is not saved:
+  it is advice, not a record, and keeping it would imply the app stands behind
+  it.
+- The caveat sits under the compose field on every screen of the conversation.
+
 ### What leaves the device
 
-Only the text of the page being added, and its link — and only when a parser has
-already failed, or a title needs shortening. Your wishlist is never sent. The
+For page reading: only the text of the page being added, and its link — and
+only when a parser has already failed, or a title needs shortening. For a
+conversation: your question, and the recorded details of the one item you are
+asking about. Your wishlist as a whole is never sent. The
 assistant never runs during a price refresh, so an item keeps the name you saved
 it under.
 

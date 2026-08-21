@@ -21,6 +21,26 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 3.0 — Ask the assistant about products
+
+A conversation with the assistant, from an item's menu ("Ask About This") or the
+wishlist menu ("Ask the Assistant"): alternatives, whether a price looks
+reasonable, what to check before buying, what people complain about.
+
+- Grounded in what the app has **actually observed** for that item — the price
+  it saw and when, the price when you added it, the availability it last read,
+  your own note — so "is this a good price?" reasons from real data rather than
+  from the product's name.
+- The model is told plainly that it cannot browse, cannot check a live price,
+  and must never claim something is in stock, discounted or discontinued.
+- Nothing it says is written into an item, and the conversation is not saved.
+  It is advice, not a record.
+- One-tap opening questions when there is an item to discuss, because a blank
+  box is a worse question than a specific one.
+- Opening it without a key configured offers setup **inline** — pushed within
+  the sheet rather than throwing the user at another tab, so they come straight
+  back to the question they had.
+
 ## 2.2 — Groq models read from the provider
 
 The shipped default Groq model, `llama-3.3-70b-versatile`, was deprecated by

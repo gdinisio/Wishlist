@@ -22,6 +22,8 @@ struct WishlistScreen: View {
     @State private var editingItem: WishlistItem?
     @State private var pendingDeletion: WishlistItem?
     @State private var addExit: AddItemExit = .none
+    @State private var askingAbout: WishlistItem?
+    @State private var isAskingGenerally = false
     @State private var selectedCollection: String?
     @State private var onlyWithinBudget = false
 
@@ -80,6 +82,12 @@ struct WishlistScreen: View {
                                     Label(String(localized: "Refresh Prices"), systemImage: "arrow.clockwise")
                                 }
                                 .disabled(repository.isRefreshing || repository.activeItems.isEmpty)
+
+                                Button {
+                                    isAskingGenerally = true
+                                } label: {
+                                    Label(String(localized: "Ask the Assistant"), systemImage: "sparkles")
+                                }
                             }
                         } label: {
                             // The control keeps its place; only its symbol
@@ -124,6 +132,12 @@ struct WishlistScreen: View {
                 }
                 .sheet(item: $editingItem) { item in
                     ItemEditorSheet(mode: .edit(item))
+                }
+                .sheet(item: $askingAbout) { item in
+                    AskAssistantSheet(item: item)
+                }
+                .sheet(isPresented: $isAskingGenerally) {
+                    AskAssistantSheet(item: nil)
                 }
                 .confirmationDialog(
                     Text(deletionTitle),
@@ -213,7 +227,8 @@ struct WishlistScreen: View {
                         ItemActionsMenu(
                             item: item,
                             onEdit: { editingItem = item },
-                            onDelete: { requestDeletion(of: item) }
+                            onDelete: { requestDeletion(of: item) },
+                            onAsk: { askingAbout = item }
                         )
                     }
                 }

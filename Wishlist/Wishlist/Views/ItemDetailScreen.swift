@@ -24,6 +24,7 @@ struct ItemDetailScreen: View {
     @State private var isConfirmingDelete = false
     @State private var isDescriptionExpanded = false
     @State private var isViewingImage = false
+    @State private var isAsking = false
 
     var body: some View {
         Group {
@@ -73,7 +74,8 @@ struct ItemDetailScreen: View {
                         item: item,
                         onEdit: { isEditing = true },
                         onDelete: { requestDeletion() },
-                        onRefresh: { refresh() }
+                        onRefresh: { refresh() },
+                        onAsk: { isAsking = true }
                     )
                 } label: {
                     Label(String(localized: "More"), systemImage: "ellipsis.circle")
@@ -82,6 +84,9 @@ struct ItemDetailScreen: View {
         }
         .sheet(isPresented: $isEditing) {
             ItemEditorSheet(mode: .edit(item))
+        }
+        .sheet(isPresented: $isAsking) {
+            AskAssistantSheet(item: item)
         }
         .fullScreenCover(isPresented: $isViewingImage) {
             if let url = item.imageURL {

@@ -66,6 +66,37 @@ nonisolated struct GroqClient: LanguageModelClient {
             ]
         ]
 
+        guard let json = try await perform(body),
+              let content = json.value(at: "choices.0.message.content")?.stringValue,
+              let payload = JSONValue.parse(Data(content.utf8))
+        else { return nil }
+
+        return payload
+    }
+
+    func reply(system: String, turns: [ChatTurn], maxTokens: Int) async throws -> String? {
+        guard !apiKey.isEmpty else { throw LookupError.notAuthorized(provider: displayName) }
+        guard !turns.isEmpty else { return nil }
+
+        var messages: [JSONValue] = [["role": "system", "content": .string(system)]]
+        messages.append(contentsOf: turns.map { turn in
+            ["role": .string(turn.role.rawValue), "content": .string(turn.text)]
+        })
+
+        let body: JSONValue = [
+            "model": .string(model),
+            "max_tokens": .number(Double(maxTokens)),
+            // Some warmth for advice, where extraction wants none.
+            "temperature": .number(0.4),
+            "messages": .array(messages)
+        ]
+
+        guard let json = try await perform(body) else { return nil }
+        let text = json.value(at: "choices.0.message.content")?.stringValue
+        return (text?.isEmpty ?? true) ? nil : text
+    }
+
+    private func perform(_ body: JSONValue) async throws -> JSONValue? {
         var request = URLRequest(url: Self.endpoint)
         request.httpMethod = "POST"
         request.httpBody = try body.encoded()
@@ -76,12 +107,7 @@ nonisolated struct GroqClient: LanguageModelClient {
         guard (200...299).contains(response.statusCode) else {
             throw LanguageModelFailure.from(response, provider: displayName)
         }
-        guard let json = JSONValue.parse(response.data),
-              let content = json.value(at: "choices.0.message.content")?.stringValue,
-              let payload = JSONValue.parse(Data(content.utf8))
-        else { return nil }
-
-        return payload
+        return JSONValue.parse(response.data)
     }
 
     /// The chat models this key can actually reach. Asking the provider beats

@@ -16,6 +16,9 @@ struct ItemActionsMenu: View {
     var onEdit: () -> Void
     var onDelete: () -> Void
     var onRefresh: (() -> Void)?
+    /// Supplied where a conversation makes sense; omitted elsewhere, so the
+    /// menu never offers a dead action.
+    var onAsk: (() -> Void)?
 
     @Environment(WishlistRepository.self) private var repository
     @Environment(\.openURL) private var openURL
@@ -42,6 +45,14 @@ struct ItemActionsMenu: View {
                     repository.markObtained(id: item.id)
                 } label: {
                     Label(String(localized: "Mark as Obtained"), systemImage: "checkmark.circle")
+                }
+            }
+
+            if let onAsk {
+                Button {
+                    onAsk()
+                } label: {
+                    Label(String(localized: "Ask About This"), systemImage: "sparkles")
                 }
             }
 

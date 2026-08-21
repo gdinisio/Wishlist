@@ -107,6 +107,24 @@ nonisolated struct IntelligenceSettings: Sendable, Equatable {
     }
 }
 
+/// One turn of a conversation with the assistant.
+nonisolated struct ChatTurn: Sendable, Identifiable, Equatable {
+    nonisolated enum Role: String, Sendable, Equatable {
+        case user
+        case assistant
+    }
+
+    let id: UUID
+    var role: Role
+    var text: String
+
+    init(id: UUID = UUID(), role: Role, text: String) {
+        self.id = id
+        self.role = role
+        self.text = text
+    }
+}
+
 /// A JSON-shaped answer requested from a model.
 nonisolated struct LanguageModelFunction: Sendable {
     var name: String
@@ -125,6 +143,16 @@ nonisolated protocol LanguageModelClient: Sendable {
         function: LanguageModelFunction,
         maxTokens: Int
     ) async throws -> JSONValue?
+
+    /// A reply in prose, for the shopping advisor. Distinct from `answer`
+    /// because this is advice the user reads and judges, not product data the
+    /// app stores — so it is never verified against a page, and never written
+    /// into an item.
+    func reply(
+        system: String,
+        turns: [ChatTurn],
+        maxTokens: Int
+    ) async throws -> String?
 }
 
 /// Turns a model service's non-2xx reply into an error that carries the
