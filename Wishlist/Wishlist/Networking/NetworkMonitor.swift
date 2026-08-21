@@ -16,8 +16,9 @@ import Observation
 final class NetworkMonitor {
     private(set) var isOnline: Bool = true
 
-    // Internally thread-safe, and read from `deinit`, which is nonisolated.
-    private nonisolated(unsafe) let monitor = NWPathMonitor()
+    // NWPathMonitor is Sendable, so a nonisolated `deinit` can cancel it
+    // without any escape hatch.
+    private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.gdinisio.Wishlist.network-monitor")
 
     init() {

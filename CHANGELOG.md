@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1 — First build fixes
+
+- `AppEnvironment`'s injectable dependencies are optional parameters resolved in
+  the initialiser body rather than default parameter values. A default value is
+  evaluated in a *nonisolated* context, so `SettingsStore()` and
+  `NetworkMonitor()` — both main-actor isolated — could not legally be
+  constructed there. Call sites are unchanged.
+- Dropped a redundant `nonisolated(unsafe)` on `NetworkMonitor.monitor`;
+  `NWPathMonitor` is already `Sendable`, so a nonisolated `deinit` can cancel it
+  unaided.
+
 ## 2.0 — Collections, budget, price alerts
 
 ### Collections

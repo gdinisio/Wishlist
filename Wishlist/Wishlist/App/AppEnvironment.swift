@@ -19,19 +19,26 @@ final class AppEnvironment {
     let router = AppRouter()
     let alerts = PriceAlertCenter()
 
+    /// Injectable pieces are optional rather than defaulted: a default
+    /// parameter value is evaluated in a nonisolated context, so a main-actor
+    /// type cannot be constructed there. Building them in the body — which is
+    /// main-actor isolated — keeps the same call sites working.
     init(
-        settings: SettingsStore = SettingsStore(),
+        settings: SettingsStore? = nil,
         store: (any WishlistPersisting)? = nil,
-        lookup: ProductLookupService = .makeDefault(),
-        network: NetworkMonitor = NetworkMonitor()
+        lookup: ProductLookupService? = nil,
+        network: NetworkMonitor? = nil
     ) {
-        self.settings = settings
-        self.network = network
-        self.lookup = lookup
+        let resolvedSettings = settings ?? SettingsStore()
+        let resolvedLookup = lookup ?? ProductLookupService.makeDefault()
+
+        self.settings = resolvedSettings
+        self.network = network ?? NetworkMonitor()
+        self.lookup = resolvedLookup
         self.repository = WishlistRepository(
             store: store ?? FileWishlistStore(),
-            lookup: lookup,
-            credentialsProvider: { settings.credentials }
+            lookup: resolvedLookup,
+            credentialsProvider: { resolvedSettings.credentials }
         )
     }
 
