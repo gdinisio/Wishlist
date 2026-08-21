@@ -81,7 +81,22 @@ nonisolated struct IntelligenceSettings: Sendable, Equatable {
     /// Fill in a category when the retailer published none.
     var suggestsCategories: Bool = true
 
-    static let defaultGroqModel = "llama-3.3-70b-versatile"
+    /// Groq retires models on a schedule, so this is a starting point rather
+    /// than a promise — Settings lists whatever the user's key can actually
+    /// reach.
+    static let defaultGroqModel = "openai/gpt-oss-120b"
+
+    /// Identifiers shipped by earlier builds that Groq no longer serves. A
+    /// stored value matching one of these is replaced rather than left to fail
+    /// with a confusing error on the user's first lookup.
+    static let retiredGroqModels: Set<String> = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma-7b-it"
+    ]
 
     var isConfigured: Bool {
         switch provider {

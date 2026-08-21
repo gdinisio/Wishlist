@@ -20,6 +20,10 @@ nonisolated struct GroqClient: LanguageModelClient {
     private var model: String = IntelligenceSettings.defaultGroqModel
 
     private static let endpoint = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
+    private static let modelsEndpoint = URL(string: "https://api.groq.com/openai/v1/models")!
+
+    /// Model families that are not chat models, and would only clutter a picker.
+    private static let excludedModelKeywords = ["whisper", "tts", "guard", "embed", "prompt-guard"]
 
     init(http: HTTPClient) {
         self.http = http
@@ -78,5 +82,30 @@ nonisolated struct GroqClient: LanguageModelClient {
         else { return nil }
 
         return payload
+    }
+
+    /// The chat models this key can actually reach. Asking the provider beats
+    /// hard-coding a list that goes stale the next time a model is retired —
+    /// which is exactly how the previous default stopped working.
+    func availableModels() async throws -> [String] {
+        guard !apiKey.isEmpty else { throw LookupError.notAuthorized(provider: displayName) }
+
+        var request = URLRequest(url: Self.modelsEndpoint)
+        request.setValue("Bearer " + apiKey, forHTTPHeaderField: "Authorization")
+
+        let response = try await http.sendAllowingHTTPError(request, provider: displayName)
+        guard (200...299).contains(response.statusCode) else {
+            throw LanguageModelFailure.from(response, provider: displayName)
+        }
+        guard let json = JSONValue.parse(response.data) else {
+            throw LookupError.providerUnavailable(provider: displayName)
+        }
+        return (json["data"]?.arrayValue ?? [])
+            .compactMap { $0["id"]?.stringValue }
+            .filter { identifier in
+                let lowered = identifier.lowercased()
+                return !Self.excludedModelKeywords.contains { lowered.contains($0) }
+            }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 }

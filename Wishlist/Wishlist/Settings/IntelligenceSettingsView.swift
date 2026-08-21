@@ -13,6 +13,9 @@ import Foundation
 struct IntelligenceSettingsView: View {
     @Environment(SettingsStore.self) private var settings
     @State private var tester = ConnectionTester()
+    @State private var groqModels: [String] = []
+    @State private var isLoadingModels = false
+    @State private var modelLoadError: LookupError?
 
     var body: some View {
         @Bindable var settings = settings
@@ -50,6 +53,10 @@ struct IntelligenceSettingsView: View {
         .navigationTitle(Text("Assistant"))
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: settings.intelligence) { _, _ in tester.reset() }
+        .task {
+            guard settings.intelligenceProvider == .groq else { return }
+            await loadGroqModels()
+        }
     }
 
     // MARK: - Providers
@@ -84,14 +91,54 @@ struct IntelligenceSettingsView: View {
             SecureField(String(localized: "API Key"), text: $settings.groqKey)
                 .textContentType(.password)
 
-            TextField(String(localized: "Model"), text: $settings.groqModel)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .font(.body.monospaced())
+            if groqModels.isEmpty {
+                // Fallback while the list is unknown, so a working key is never
+                // blocked by a failed lookup of what it can reach.
+                TextField(String(localized: "Model"), text: $settings.groqModel)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.body.monospaced())
+            } else {
+                Picker(selection: $settings.groqModel) {
+                    ForEach(groqModels, id: \.self) { identifier in
+                        Text(identifier).tag(identifier)
+                    }
+                } label: {
+                    Text("Model")
+                }
+            }
+
+            Button {
+                Task { await loadGroqModels() }
+            } label: {
+                if isLoadingModels {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Checking which models your key can use…")
+                    }
+                } else {
+                    Label(
+                        groqModels.isEmpty
+                            ? String(localized: "Load Available Models")
+                            : String(localized: "Reload Models"),
+                        systemImage: "arrow.clockwise"
+                    )
+                }
+            }
+            .disabled(isLoadingModels || settings.groqKey.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            if let modelLoadError {
+                InlineMessage(
+                    symbolName: modelLoadError.symbolName,
+                    title: modelLoadError.title,
+                    message: modelLoadError.guidance,
+                    tint: .orange
+                )
+            }
         } header: {
             Text("Groq")
         } footer: {
-            Text("Groq has a free tier, which keeps Wishlist free end to end. Keys come from console.groq.com. Leave the model as \(IntelligenceSettings.defaultGroqModel) unless you have a reason to change it.")
+            Text("Groq has a free tier, which keeps Wishlist free end to end. Keys come from console.groq.com. Groq retires models regularly, so the list is read from your key rather than fixed in the app.")
         }
     }
 
@@ -144,6 +191,34 @@ struct IntelligenceSettingsView: View {
                 message: String(localized: "Only the text of the page you're adding, and its link. Your wishlist is never sent. Keys stay in this device's Keychain."),
                 tint: .secondary
             )
+        }
+    }
+
+    /// Asks Groq what this key can actually reach. A model the app shipped as a
+    /// default may since have been retired, so the truthful list comes from the
+    /// provider, not from us.
+    private func loadGroqModels() async {
+        let key = settings.groqKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, !isLoadingModels else { return }
+
+        isLoadingModels = true
+        modelLoadError = nil
+        defer { isLoadingModels = false }
+
+        let client = GroqClient(http: URLSessionHTTPClient())
+            .configured(apiKey: key, model: settings.groqModel)
+        do {
+            let identifiers = try await client.availableModels()
+            groqModels = identifiers
+            // A saved model the provider no longer offers is quietly replaced
+            // with one it does — the picker makes the new value visible.
+            if let first = identifiers.first, !identifiers.contains(settings.groqModel) {
+                settings.groqModel = first
+            }
+        } catch let error as LookupError {
+            modelLoadError = error
+        } catch {
+            modelLoadError = .providerUnavailable(provider: "Groq")
         }
     }
 

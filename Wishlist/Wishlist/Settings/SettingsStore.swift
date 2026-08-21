@@ -92,7 +92,12 @@ final class SettingsStore {
         claudeModel = defaults.string(forKey: Key.claudeModel)
             .flatMap(ClaudeModel.init(rawValue:))
             ?? .opus5
-        groqModel = defaults.string(forKey: Key.groqModel) ?? IntelligenceSettings.defaultGroqModel
+        let storedGroqModel = defaults.string(forKey: Key.groqModel) ?? IntelligenceSettings.defaultGroqModel
+        // A model the provider has since retired would fail every lookup with a
+        // confusing error, so it is replaced rather than preserved.
+        groqModel = IntelligenceSettings.retiredGroqModels.contains(storedGroqModel)
+            ? IntelligenceSettings.defaultGroqModel
+            : storedGroqModel
         readsDifficultPages = defaults.object(forKey: Key.readsDifficultPages) as? Bool ?? true
         shortensTitles = defaults.object(forKey: Key.shortensTitles) as? Bool ?? true
         suggestsCategories = defaults.object(forKey: Key.suggestsCategories) as? Bool ?? true

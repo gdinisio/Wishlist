@@ -21,6 +21,21 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 2.2 — Groq models read from the provider
+
+The shipped default Groq model, `llama-3.3-70b-versatile`, was deprecated by
+Groq on 17 June 2026 and stopped being served in August 2026, so every request
+failed with "model not available" even with a perfectly good key.
+
+- The model list in Settings is now **read from your key** via Groq's models
+  endpoint, rather than being a fixed string in the app. Non-chat models
+  (speech, guard, embeddings) are filtered out. A text field remains as a
+  fallback if the list can't be fetched, so a working key is never blocked.
+- A stored model identifier that Groq has since retired is migrated to a
+  current one on launch instead of failing on first use.
+- The default moved to `openai/gpt-oss-120b`, one of Groq's own recommended
+  replacements — but it is now a starting point rather than a promise.
+
 ## 2.1 — First build fixes
 
 - `AppEnvironment`'s injectable dependencies are optional parameters resolved in
