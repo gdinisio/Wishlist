@@ -21,6 +21,26 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 3.1 — A leaner, fresher lookup chain
+
+The chain now knows *why* it is running. Adding an item wants everything;
+re-checking one already saved wants a price and nothing else.
+
+- **Price checks skip providers that cannot price.** Microlink structurally
+  never returns a price, so refreshing twenty items no longer makes twenty
+  calls to it. Expressed as a `canProvidePrice` capability on the provider
+  contract rather than a name check.
+- **Refreshes bypass the HTTP cache.** A cached page reports the price you
+  already have — which is precisely what a refresh exists to discover has
+  changed. This was a correctness bug, not just a slow path.
+- **Availability no longer gates completeness.** Plenty of legitimate product
+  pages never state stock, and requiring it meant the chain ran every remaining
+  provider on almost every *successful* lookup.
+- **The whole chain has a deadline** — 20s adding, 12s refreshing — so four
+  providers with a 15s timeout each can no longer add up to a minute of
+  waiting. It returns what it has instead.
+- The language model is never spent on a price check.
+
 ## 3.0 — Ask the assistant about products
 
 A conversation with the assistant, from an item's menu ("Ask About This") or the

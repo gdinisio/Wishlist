@@ -179,7 +179,7 @@ nonisolated final class ProductLookupService: Sendable {
         credentials: LookupCredentials
     ) async throws -> ProductSnapshot {
         let link = try URLValidator.validate(productURL.absoluteString)
-        let request = LookupRequest(link: link, searchTerm: nil)
+        let request = LookupRequest(link: link, searchTerm: nil, purpose: .priceCheck)
         let providers = self.providers
 
         return try await coalescer.run(key: request.coalescingKey, priority: .utility) { [self] in
@@ -221,12 +221,19 @@ nonisolated final class ProductLookupService: Sendable {
         var merged = ProductSnapshot()
         var failures: [LookupError] = []
         var attempted = false
+        let deadline = Date.now.addingTimeInterval(request.purpose.budget)
 
         for provider in providers {
             if Task.isCancelled { return (merged, .cancelled) }
+            // Return what we have rather than let a slow chain keep the user
+            // waiting past the point the answer is useful.
+            if Date.now >= deadline { break }
+            // A provider that can never return a price has nothing to add to a
+            // price check, so it is not called at all.
+            if request.purpose == .priceCheck, !provider.canProvidePrice { continue }
             guard provider.canHandle(request, credentials: credentials) else { continue }
             // Nothing left to ask for.
-            if isComplete(merged) { break }
+            if isComplete(merged, for: request.purpose) { break }
 
             attempted = true
             onStage(.contacting(provider.progressMessage))
@@ -249,13 +256,18 @@ nonisolated final class ProductLookupService: Sendable {
         return (merged, mostInformative(failures))
     }
 
-    /// Every headline field is filled — asking another provider cannot improve
-    /// the result, so the chain stops.
-    private static func isComplete(_ snapshot: ProductSnapshot) -> Bool {
-        snapshot.name != nil
-            && snapshot.price != nil
-            && snapshot.imageURL != nil
-            && snapshot.availability != .unknown
+    /// Whether asking another provider could still improve the result.
+    ///
+    /// Availability deliberately does not count towards a full lookup: plenty
+    /// of legitimate product pages never state it, and requiring it meant the
+    /// chain ran every remaining provider on almost every successful lookup.
+    private static func isComplete(_ snapshot: ProductSnapshot, for purpose: LookupPurpose) -> Bool {
+        switch purpose {
+        case .full:
+            return snapshot.name != nil && snapshot.price != nil && snapshot.imageURL != nil
+        case .priceCheck:
+            return snapshot.price != nil
+        }
     }
 
     /// Picks the failure that best explains what the user should do, rather

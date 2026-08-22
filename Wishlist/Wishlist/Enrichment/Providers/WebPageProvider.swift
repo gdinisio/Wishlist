@@ -13,6 +13,7 @@ nonisolated struct WebPageProvider: ProductDataProvider {
     let identifier = "web-page"
     let displayName = String(localized: "Product page")
     let progressMessage = String(localized: "Reading the product page…")
+    let canProvidePrice = true
 
     private let http: HTTPClient
     private let models: LanguageModelRouter
@@ -39,7 +40,7 @@ nonisolated struct WebPageProvider: ProductDataProvider {
             contentType = prefetched.contentType
         } else {
             let response = try await http.send(
-                Self.makeRequest(for: link.canonicalURL),
+                Self.makeRequest(for: link.canonicalURL, purpose: request.purpose),
                 provider: displayName
             )
             body = response.data
@@ -66,7 +67,8 @@ nonisolated struct WebPageProvider: ProductDataProvider {
         // Some retailers publish nothing a parser can use. If the user has
         // turned it on, a model reads the page's text and points at the values
         // — every one of which is then checked back against that text.
-        if needsAssistance(snapshot), credentials.intelligence.readsDifficultPages,
+        if request.purpose == .full, needsAssistance(snapshot),
+           credentials.intelligence.readsDifficultPages,
            let client = models.client(for: credentials.intelligence) {
             let digest = HTMLParser.textDigest(from: html)
             let assisted = await extractor.snapshot(
@@ -89,9 +91,14 @@ nonisolated struct WebPageProvider: ProductDataProvider {
     /// Retailers serve very different markup to clients that do not look like a
     /// browser — often no structured data at all — so the request advertises
     /// itself honestly as a page view.
-    static func makeRequest(for url: URL) -> URLRequest {
+    static func makeRequest(for url: URL, purpose: LookupPurpose = .full) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        if purpose == .priceCheck {
+            // A cached copy would report the price we already have, which is
+            // exactly the thing a refresh exists to find out has changed.
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+        }
         request.setValue(
             "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
                 + "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",

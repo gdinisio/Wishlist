@@ -19,6 +19,7 @@ nonisolated struct AmazonPAAPIProvider: ProductDataProvider {
     let identifier = "amazon-paapi"
     let displayName = String(localized: "Amazon")
     let progressMessage = String(localized: "Looking up on Amazon…")
+    let canProvidePrice = true
 
     private let http: HTTPClient
 

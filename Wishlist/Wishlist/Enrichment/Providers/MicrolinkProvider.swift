@@ -13,6 +13,7 @@ nonisolated struct MicrolinkProvider: ProductDataProvider {
     let identifier = "microlink"
     let displayName = String(localized: "Microlink")
     let progressMessage = String(localized: "Looking for missing details…")
+    let canProvidePrice = false
 
     private let http: HTTPClient
     private let endpoint = URL(string: "https://api.microlink.io")!
