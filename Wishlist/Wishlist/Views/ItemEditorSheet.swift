@@ -50,7 +50,8 @@ struct ItemEditorSheet: View {
     @State private var urlText: String
     @State private var isNamingCollection = false
     @State private var newCollectionName = ""
-    @FocusState private var isNameFocused: Bool
+    @State private var isConfirmingDiscard = false
+    @FocusState private var isPriceFocused: Bool
 
     init(mode: ItemEditorMode, onSave: ((WishlistItem) -> Void)? = nil) {
         self.mode = mode
@@ -68,7 +69,6 @@ struct ItemEditorSheet: View {
                 Section {
                     TextField(String(localized: "Name"), text: $draft.name, axis: .vertical)
                         .lineLimit(1...3)
-                        .focused($isNameFocused)
                 } header: {
                     Text("Name")
                 } footer: {
@@ -81,6 +81,7 @@ struct ItemEditorSheet: View {
                     HStack {
                         TextField(String(localized: "Price"), text: $priceText)
                             .keyboardType(.decimalPad)
+                            .focused($isPriceFocused)
                             .accessibilityLabel(Text("Price"))
                         Divider()
                         Picker(String(localized: "Currency"), selection: $currencyCode) {
@@ -172,9 +173,33 @@ struct ItemEditorSheet: View {
             }
             .navigationTitle(Text(mode.title))
             .navigationBarTitleDisplayMode(.inline)
+            .interactiveDismissDisabled(hasUnsavedChanges)
+            .confirmationDialog(
+                Text("Discard changes?"),
+                isPresented: $isConfirmingDiscard,
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "Discard Changes"), role: .destructive) { dismiss() }
+                Button(String(localized: "Keep Editing"), role: .cancel) {}
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Cancel")) { dismiss() }
+                    Button(String(localized: "Cancel")) {
+                        if hasUnsavedChanges {
+                            isConfirmingDiscard = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                }
+                // The decimal pad has no return key, so without this the
+                // keyboard has no obvious way out.
+                ToolbarItemGroup(placement: .keyboard) {
+                    if isPriceFocused {
+                        Spacer()
+                        Button(String(localized: "Done")) { isPriceFocused = false }
+                            .fontWeight(.semibold)
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(mode.saveLabel) { save() }
@@ -186,6 +211,17 @@ struct ItemEditorSheet: View {
     }
 
     // MARK: - Bindings
+
+    /// Whether anything would be lost by leaving now. Drives both the swipe-to
+    /// dismiss guard and the Cancel confirmation, so a half-finished edit is
+    /// never thrown away by a stray gesture.
+    private var hasUnsavedChanges: Bool {
+        let original = mode.item
+        return draft != original
+            || priceText != Self.priceString(original.price)
+            || currencyCode != (original.price?.currencyCode ?? Self.localCurrencyCode)
+            || urlText != (original.productURL?.absoluteString ?? "")
+    }
 
     private var trimmedName: String {
         draft.name.trimmingCharacters(in: .whitespacesAndNewlines)

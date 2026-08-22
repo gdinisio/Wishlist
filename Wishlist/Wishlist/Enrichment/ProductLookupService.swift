@@ -176,10 +176,11 @@ nonisolated final class ProductLookupService: Sendable {
     /// refreshes share one request.
     func refresh(
         productURL: URL,
-        credentials: LookupCredentials
+        credentials: LookupCredentials,
+        purpose: LookupPurpose = .priceCheck
     ) async throws -> ProductSnapshot {
         let link = try URLValidator.validate(productURL.absoluteString)
-        let request = LookupRequest(link: link, searchTerm: nil, purpose: .priceCheck)
+        let request = LookupRequest(link: link, searchTerm: nil, purpose: purpose)
         let providers = self.providers
 
         return try await coalescer.run(key: request.coalescingKey, priority: .utility) { [self] in

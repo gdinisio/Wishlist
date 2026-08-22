@@ -21,6 +21,21 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 3.2 — Interface refinements
+
+- **The decimal keyboard can be dismissed.** The price field in the item editor
+  and the budget field in Settings use a decimal pad, which has no return key —
+  so there was no obvious way out of the keyboard. Both now show a Done button
+  in the keyboard toolbar, and only while that field is focused.
+- **Edits are no longer lost to a stray swipe.** The item editor blocks
+  interactive dismissal while there are unsaved changes, and Cancel asks before
+  discarding — the standard iOS pattern, and the same one Contacts and Calendar
+  use.
+- **"Refresh Price" became "Update from Store"** and now fetches whatever the
+  item is actually missing: a full lookup when headline details are absent, a
+  price check when only the price needs re-reading. One action that does the
+  right thing rather than two the user has to choose between.
+
 ## 3.1 — A leaner, fresher lookup chain
 
 The chain now knows *why* it is running. Adding an item wants everything;

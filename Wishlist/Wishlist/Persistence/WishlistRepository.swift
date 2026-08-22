@@ -354,14 +354,24 @@ final class WishlistRepository {
         scheduleSummaryClear()
     }
 
-    /// Refreshes one item, used from its detail view.
+    /// Updates one item from its store, used from its detail view.
+    ///
+    /// An item still missing headline details gets a full lookup; one that only
+    /// wants a current price does not pay for the rest of the chain. That is
+    /// why there is a single "Update from Store" action rather than two the
+    /// user has to choose between.
     @discardableResult
     func refresh(id: WishlistItem.ID) async -> LookupError? {
         guard let item = item(id: id), let url = item.productURL else {
             return .unsupportedURL(host: nil)
         }
+        let purpose: LookupPurpose = item.missingFields.isEmpty ? .priceCheck : .full
         do {
-            let snapshot = try await lookup.refresh(productURL: url, credentials: credentialsProvider())
+            let snapshot = try await lookup.refresh(
+                productURL: url,
+                credentials: credentialsProvider(),
+                purpose: purpose
+            )
             guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
             apply(snapshot, to: &items[index])
             scheduleSave()

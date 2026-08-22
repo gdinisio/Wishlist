@@ -23,6 +23,7 @@ struct SettingsScreen: View {
     @State private var isConfirmingItemDeletion = false
     @State private var isConfirmingKeyRemoval = false
     @State private var didClearCache = false
+    @FocusState private var isBudgetFocused: Bool
 
     var body: some View {
         @Bindable var settings = settings
@@ -109,6 +110,7 @@ struct SettingsScreen: View {
                     HStack {
                         TextField(String(localized: "Amount"), text: $settings.availableToSpendText)
                             .keyboardType(.decimalPad)
+                            .focused($isBudgetFocused)
                             .accessibilityLabel(Text("Amount available to spend"))
                         Divider()
                         Picker(String(localized: "Currency"), selection: $settings.budgetCurrencyCode) {
@@ -187,6 +189,16 @@ struct SettingsScreen: View {
                 }
             }
             .navigationTitle(Text("Settings"))
+            .toolbar {
+                // The decimal pad offers no return key of its own.
+                ToolbarItemGroup(placement: .keyboard) {
+                    if isBudgetFocused {
+                        Spacer()
+                        Button(String(localized: "Done")) { isBudgetFocused = false }
+                            .fontWeight(.semibold)
+                    }
+                }
+            }
             .task { await loadCacheSize() }
             .confirmationDialog(
                 Text("Delete all items?"),

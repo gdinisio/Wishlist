@@ -102,7 +102,7 @@ struct ItemActionsMenu: View {
                         Button {
                             onRefresh()
                         } label: {
-                            Label(String(localized: "Refresh Price"), systemImage: "arrow.clockwise")
+                            Label(String(localized: "Update from Store"), systemImage: "arrow.clockwise")
                         }
                     }
                 }
