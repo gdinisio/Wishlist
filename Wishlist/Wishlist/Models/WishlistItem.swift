@@ -21,6 +21,11 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     var availability: Availability
     var brand: String?
     var category: String?
+    /// The variant the user actually wants. Kept separately from the name
+    /// because it is what they searched on, what distinguishes one listing
+    /// from another, and what they need reminding of in a shop.
+    var colour: String?
+    var size: String?
     /// Optional grouping the user assigns, e.g. "Kitchen" or "Gifts". Plain
     /// text rather than a separate entity: a wishlist does not need a taxonomy,
     /// and this keeps items self-contained for a future sync.
@@ -53,6 +58,8 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         availability: Availability = .unknown,
         brand: String? = nil,
         category: String? = nil,
+        colour: String? = nil,
+        size: String? = nil,
         collectionName: String? = nil,
         details: String? = nil,
         dateAdded: Date = .now,
@@ -74,6 +81,8 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         self.availability = availability
         self.brand = brand
         self.category = category
+        self.colour = colour
+        self.size = size
         self.collectionName = collectionName
         self.details = details
         self.dateAdded = dateAdded
@@ -90,7 +99,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     // `CustomStringConvertible`, but persists under its natural key.
     private enum CodingKeys: String, CodingKey {
         case id, name, fullName, imageURL, productURL, price, retailer, availability
-        case brand, category, collectionName
+        case brand, category, colour, size, collectionName
         case details = "description"
         case dateAdded, dateObtained, status, notes
         case priceHistory, dateRefreshed, sources, dateModified
@@ -129,6 +138,16 @@ nonisolated extension WishlistItem {
             current: current,
             difference: Money(amount: current.amount - original.amount, currencyCode: current.currencyCode)
         )
+    }
+
+    /// "Black · Large", or nothing at all. Shown wherever the variant matters.
+    var variantSummary: String? {
+        let parts = [colour, size].compactMap { value -> String? in
+            guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !value.isEmpty else { return nil }
+            return value
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// Whether this item's price fits inside an amount. Only comparable when

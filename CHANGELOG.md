@@ -21,6 +21,39 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 4.0 — Add by name, and a tougher link reader
+
+### One field instead of two
+The Add sheet had a Link field and a Name field, and asked the user to decide
+which they were using. It now has one field that works out for itself whether
+what you typed is an address or a description. The button reads **Fetch** or
+**Search** accordingly.
+
+### Adding by name, for free
+There is no dependable, keyless product-search API — so Wishlist does not
+pretend to have one. It asks the storefront you already shop at to search, and
+reads the results page with the same free reader it uses everywhere else.
+
+You get a list of real results with pictures and prices to choose from. Picking
+one then runs the **ordinary lookup against that product's own page**, so an
+item added by name is exactly as verified as one added from a link. If Amazon
+answers with a human check instead of results, the app says so rather than
+implying the product doesn't exist.
+
+### Colour and size
+Optional fields shown only when you are typing a name — a link already points
+at one exact variant, so asking would be asking twice. They narrow the search
+*and* are kept on the item, appearing in the list, on its screen, and in what
+the assistant is told. Your wording always survives whatever the lookup returns.
+
+### The link reader is harder to break
+- **Pasting messy text now works.** "Look at this 👀 https://…" used to be
+  rejected outright. Links are extracted with `NSDataDetector` — the same
+  detector iOS uses to make links tappable — so share-sheet text, messages and
+  quoted URLs all resolve.
+- A bot-check page on a product URL is reported as what it is, instead of
+  surfacing as "no details found" and blaming the product.
+
 ## 3.2 — Interface refinements
 
 - **The decimal keyboard can be dismissed.** The price field in the item editor

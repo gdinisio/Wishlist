@@ -22,6 +22,7 @@ struct WishlistApp: App {
                 .environment(environment.router)
                 .environment(environment.alerts)
                 .environment(\.productLookup, environment.lookup)
+                .environment(\.productSearch, environment.search)
                 .task {
                     await environment.repository.load()
                     await environment.alerts.refreshAuthorization()

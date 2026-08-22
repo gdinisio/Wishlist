@@ -118,6 +118,17 @@ struct ItemEditorSheet: View {
                 }
 
                 Section {
+                    TextField(String(localized: "Colour"), text: optionalBinding(\.colour))
+                        .textInputAutocapitalization(.words)
+                    TextField(String(localized: "Size"), text: optionalBinding(\.size))
+                        .textInputAutocapitalization(.words)
+                } header: {
+                    Text("Which One")
+                } footer: {
+                    Text("The variant you actually want — useful in a shop, and when asking the assistant about it.")
+                }
+
+                Section {
                     Picker(selection: $draft.collectionName) {
                         Text("None").tag(String?.none)
                         ForEach(collectionOptions, id: \.self) { name in

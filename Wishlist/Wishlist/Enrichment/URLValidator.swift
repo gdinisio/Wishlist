@@ -31,13 +31,38 @@ nonisolated enum URLValidator {
         "ebay.us", "rstyle.me", "shop.app", "lnk.to", "spr.ly"
     ]
 
+    /// Pulls the first web address out of arbitrary text, using the same
+    /// detector iOS uses to make links tappable. Share sheets and messages
+    /// rarely hand over a bare URL — "Look at this 👀 https://…" is the normal
+    /// case, and it used to be rejected outright.
+    static func extractedURL(in text: String) -> URL? {
+        guard let detector = try? NSDataDetector(
+            types: NSTextCheckingResult.CheckingType.link.rawValue
+        ) else { return nil }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        for match in detector.matches(in: text, options: [], range: range) {
+            guard let url = match.url else { continue }
+            let scheme = url.scheme?.lowercased()
+            if scheme == "http" || scheme == "https" { return url }
+        }
+        return nil
+    }
+
     /// Parses arbitrary user input into a validated product link.
     static func validate(_ input: String) throws -> ProductLink {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LookupError.invalidURL }
 
-        // People paste "amazon.co.uk/dp/…" without a scheme all the time.
-        let candidate = trimmed.contains("://") ? trimmed : "https://" + trimmed
+        // Prefer a link found inside surrounding text; fall back to treating
+        // the whole string as an address, since people paste "amazon.co.uk/dp/…"
+        // without a scheme all the time.
+        let candidate: String
+        if let found = extractedURL(in: trimmed) {
+            candidate = found.absoluteString
+        } else {
+            candidate = trimmed.contains("://") ? trimmed : "https://" + trimmed
+        }
 
         guard var components = URLComponents(string: candidate),
               let scheme = components.scheme?.lowercased(),
@@ -83,15 +108,16 @@ nonisolated enum URLValidator {
         )
     }
 
-    /// Lenient check used to decide whether the Add screen should treat typed
-    /// text as a link or as a product name. Never throws.
+    /// Decides whether typed text is a link or a product name. Never throws.
+    ///
+    /// A product name almost always contains spaces and a pasted address
+    /// almost never does, so a detector hit on spaceless input is a link. Text
+    /// with spaces only counts when it carries an explicit scheme, which keeps
+    /// "Nike Air Max 90" a name while "look at this https://…" is a link.
     static func looksLikeURL(_ input: String) -> Bool {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !trimmed.contains(" ") else { return false }
-        if trimmed.contains("://") { return true }
-        guard let dot = trimmed.firstIndex(of: "."), dot != trimmed.startIndex else { return false }
-        let afterDot = trimmed[trimmed.index(after: dot)...]
-        return afterDot.count >= 2 && afterDot.first?.isLetter == true
+        guard !trimmed.isEmpty, extractedURL(in: trimmed) != nil else { return false }
+        return !trimmed.contains(" ") || trimmed.contains("://")
     }
 
     private static func cleanedQueryItems(_ items: [URLQueryItem]?) -> [URLQueryItem]? {

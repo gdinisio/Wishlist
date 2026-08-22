@@ -18,6 +18,7 @@ final class AppEnvironment {
     let repository: WishlistRepository
     let router = AppRouter()
     let alerts = PriceAlertCenter()
+    let search = ProductSearchService(http: URLSessionHTTPClient())
 
     /// Injectable pieces are optional rather than defaulted: a default
     /// parameter value is evaluated in a nonisolated context, so a main-actor

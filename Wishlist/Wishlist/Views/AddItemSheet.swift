@@ -2,8 +2,14 @@
 //  AddItemSheet.swift
 //  Wishlist
 //
-//  Paste a link, tap Find, check what came back, add it. Two fields, one of
-//  them optional — everything else the app works out for itself.
+//  One field. Paste a link or type a name — the app works out which it is
+//  rather than asking, because the user already knows what they typed and
+//  should not have to tell the form twice.
+//
+//  A name is searched on the storefront the user already shops at, and the
+//  results are shown to be chosen from. Picking one runs the ordinary lookup
+//  against that product's own page, so a name-added item is exactly as
+//  verified as a link-added one.
 //
 
 import SwiftUI
@@ -23,33 +29,31 @@ struct AddItemSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.productLookup) private var lookup
+    @Environment(\.productSearch) private var search
     @Environment(WishlistRepository.self) private var repository
     @Environment(SettingsStore.self) private var settings
     @Environment(NetworkMonitor.self) private var network
 
-    @State private var urlText = ""
-    @State private var nameText = ""
+    @State private var queryText = ""
+    @State private var colourText = ""
+    @State private var sizeText = ""
     @State private var phase: AddPhase = .input
     @State private var path: [AddRoute] = []
     @State private var draft = WishlistItem(name: "")
+    @State private var candidates: [ProductCandidate] = []
     @State private var warning: LookupError?
     @State private var duplicate: WishlistItem?
     @State private var progress = LookupProgress()
-    @State private var lookupTask: Task<Void, Never>?
+    @State private var workTask: Task<Void, Never>?
     @State private var isEnteringManually = false
     @State private var didAddManually = false
-    @FocusState private var focusedField: Field?
-
-    private nonisolated enum Field: Hashable {
-        case url
-        case name
-    }
+    @FocusState private var isQueryFocused: Bool
 
     var body: some View {
         NavigationStack(path: $path) {
             Form {
-                linkSection
-                nameSection
+                inputSection
+                if !isLink { detailsSection }
                 statusSection
                 manualSection
             }
@@ -57,10 +61,15 @@ struct AddItemSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: AddRoute.self) { route in
                 switch route {
+                case .candidates:
+                    CandidatePicker(
+                        candidates: candidates,
+                        query: queryText,
+                        onChoose: { choose($0) },
+                        onAddByName: { isEnteringManually = true }
+                    )
                 case .confirm:
-                    LookupConfirmView(item: $draft, warning: warning) {
-                        addDraft()
-                    }
+                    LookupConfirmView(item: $draft, warning: warning) { addDraft() }
                 }
             }
             .toolbar {
@@ -68,19 +77,17 @@ struct AddItemSheet: View {
                     Button(String(localized: "Cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    if isSearching {
+                    if isWorking {
                         ProgressView()
                     } else {
-                        Button(primaryActionTitle) { startLookup() }
+                        Button(primaryActionTitle) { start() }
                             .fontWeight(.semibold)
                             .disabled(!canSubmit)
                     }
                 }
             }
-            .onSubmit { if canSubmit { startLookup() } }
+            .onSubmit { if canSubmit { start() } }
             .onChange(of: isEnteringManually) { _, isPresented in
-                // Dismiss the Add sheet only once the editor has closed, so the
-                // two dismissals do not fight each other.
                 if !isPresented && didAddManually { dismiss() }
             }
             .sheet(isPresented: $isEnteringManually) {
@@ -101,41 +108,41 @@ struct AddItemSheet: View {
             // A sheet's fields cannot take focus until it has finished
             // presenting; this is the standard short wait before asking.
             try? await Task.sleep(for: .milliseconds(400))
-            if urlText.isEmpty { focusedField = .url }
+            if queryText.isEmpty { isQueryFocused = true }
         }
-        .onDisappear { lookupTask?.cancel() }
+        .onDisappear { workTask?.cancel() }
     }
 
-    // MARK: - Sections
+    // MARK: - Input
 
-    private var linkSection: some View {
+    private var inputSection: some View {
         Section {
             HStack(spacing: 8) {
-                TextField(String(localized: "https://"), text: $urlText)
+                TextField(String(localized: "Link or name"), text: $queryText, axis: .vertical)
+                    .lineLimit(1...3)
                     .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .textContentType(.URL)
+                    .textInputAutocapitalization(isLink ? .never : .words)
+                    .autocorrectionDisabled(isLink)
                     .submitLabel(.go)
-                    .focused($focusedField, equals: .url)
-                    .accessibilityLabel(Text("Product link"))
+                    .focused($isQueryFocused)
+                    .accessibilityLabel(Text("Link or product name"))
 
-                if !urlText.isEmpty {
+                if !queryText.isEmpty {
                     Button {
-                        urlText = ""
+                        queryText = ""
                         resetResult()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Clear link"))
+                    .accessibilityLabel(Text("Clear"))
                 } else {
                     // The system paste control: no clipboard prompt, and it
                     // only appears when there is a link to paste.
                     PasteButton(payloadType: URL.self) { urls in
                         if let url = urls.first {
-                            urlText = url.absoluteString
+                            queryText = url.absoluteString
                             resetResult()
                         }
                     }
@@ -144,30 +151,32 @@ struct AddItemSheet: View {
                 }
             }
         } header: {
-            Text("Link")
+            Text("What do you want?")
         } footer: {
-            Text("Paste a product link and Wishlist will find the name, price and picture.")
+            Text(isLink
+                 ? String(localized: "Wishlist will read the page for the name, price and picture.")
+                 : String(localized: "Paste a link, or just type what it’s called and Wishlist will look it up."))
         }
     }
 
-    private var nameSection: some View {
+    /// Only shown for a name, because a link already points at one exact
+    /// variant — asking for its colour would be asking twice.
+    private var detailsSection: some View {
         Section {
-            TextField(String(localized: "Item name"), text: $nameText)
+            TextField(String(localized: "Colour"), text: $colourText)
                 .textInputAutocapitalization(.words)
-                .submitLabel(.go)
-                .focused($focusedField, equals: .name)
+            TextField(String(localized: "Size"), text: $sizeText)
+                .textInputAutocapitalization(.words)
         } header: {
-            Text(urlText.isEmpty ? String(localized: "Name") : String(localized: "Name (Optional)"))
+            Text("Details (Optional)")
         } footer: {
-            Text(urlText.isEmpty
-                 ? String(localized: "No link? Add it by name and fill in the details yourself.")
-                 : String(localized: "Optional. Use this if you’d rather not keep the store’s wording."))
+            Text("Narrows the search, and is kept with the item so you know which one you meant.")
         }
     }
 
     @ViewBuilder
     private var statusSection: some View {
-        if isSearching {
+        if isWorking {
             Section {
                 HStack(spacing: 12) {
                     ProgressView()
@@ -204,7 +213,7 @@ struct AddItemSheet: View {
                     tint: .orange
                 )
                 if error.isRetryable {
-                    Button(String(localized: "Try Again")) { startLookup() }
+                    Button(String(localized: "Try Again")) { start() }
                 }
                 if error.suggestsSettings {
                     Button(String(localized: "Open Settings")) {
@@ -220,19 +229,6 @@ struct AddItemSheet: View {
             }
         } else if !network.isOnline {
             Section { OfflineNotice() }
-        } else if !settings.hasAnyAPIKey && looksLikeAmazon {
-            Section {
-                InlineMessage(
-                    symbolName: "info.circle",
-                    title: String(localized: "Reading the Amazon Page"),
-                    message: String(localized: "This works, but Amazon sometimes blocks it. Amazon’s own API is free and more reliable — set it up in Settings."),
-                    tint: .secondary
-                )
-                Button(String(localized: "Open Settings")) {
-                    exit = .openSettings
-                    dismiss()
-                }
-            }
         }
     }
 
@@ -248,69 +244,85 @@ struct AddItemSheet: View {
 
     // MARK: - State
 
-    private var isSearching: Bool {
-        phase == .searching
-    }
+    private var isWorking: Bool { phase == .searching }
+
+    private var isLink: Bool { URLValidator.looksLikeURL(queryText) }
 
     private var canSubmit: Bool {
-        !isSearching && (!urlText.trimmingCharacters(in: .whitespaces).isEmpty
-            || !nameText.trimmingCharacters(in: .whitespaces).isEmpty)
+        !isWorking && !queryText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var primaryActionTitle: String {
-        URLValidator.looksLikeURL(urlText)
-            ? String(localized: "Find")
-            : String(localized: "Add")
-    }
-
-    private var looksLikeAmazon: Bool {
-        guard let link = try? URLValidator.validate(urlText) else { return false }
-        return link.isAmazon
+        isLink ? String(localized: "Fetch") : String(localized: "Search")
     }
 
     private var manualDraft: WishlistItem {
-        var item = WishlistItem(name: nameText.trimmingCharacters(in: .whitespacesAndNewlines))
-        if let link = try? URLValidator.validate(urlText) {
+        var item = WishlistItem(name: isLink ? "" : queryText.trimmingCharacters(in: .whitespacesAndNewlines))
+        applyDetails(to: &item)
+        if let link = try? URLValidator.validate(queryText) {
             item.productURL = link.canonicalURL
             item.retailer = link.retailer
         }
         return item
     }
 
+    /// The colour and size the user gave are theirs, not the store's, so they
+    /// survive whatever the lookup returns.
+    private func applyDetails(to item: inout WishlistItem) {
+        let colour = colourText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let size = sizeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        item.colour = colour.isEmpty ? nil : colour
+        item.size = size.isEmpty ? nil : size
+    }
+
     private func resetResult() {
         duplicate = nil
         warning = nil
+        candidates = []
         if case .failed = phase { phase = .input }
     }
 
-    // MARK: - Lookup
+    // MARK: - Work
 
-    private func startLookup() {
-        focusedField = nil
-        lookupTask?.cancel()
+    private func start() {
+        isQueryFocused = false
+        workTask?.cancel()
         resetResult()
         phase = .searching
-        progress.message = LookupStage.validating.message
 
-        let credentials = settings.credentials
+        if isLink {
+            runLookup(for: queryText, applyingDetails: true)
+        } else {
+            runSearch()
+        }
+    }
+
+    private func runSearch() {
+        progress.message = String(localized: "Searching…")
+
+        let query = ProductSearchService.query(
+            name: queryText,
+            colour: colourText,
+            size: sizeText
+        )
+        let marketplace = settings.amazonMarketplace
         let isOnline = network.isOnline
-        let url = urlText
-        let name = nameText
-        let progressTracker = self.progress
 
-        lookupTask = Task {
+        workTask = Task {
+            guard isOnline else {
+                phase = .failed(.offline)
+                return
+            }
             do {
-                let outcome = try await lookup.lookup(
-                    urlText: url,
-                    nameText: name,
-                    credentials: credentials,
-                    isOnline: isOnline,
-                    onStage: { stage in
-                        Task { @MainActor in progressTracker.message = stage.message }
-                    }
-                )
+                let found = try await search.search(query: query, marketplace: marketplace)
                 guard !Task.isCancelled else { return }
-                handle(outcome)
+                phase = .input
+                guard !found.isEmpty else {
+                    phase = .failed(.noProductData)
+                    return
+                }
+                candidates = found
+                path.append(.candidates)
             } catch let error as LookupError {
                 guard !Task.isCancelled, error != .cancelled else { return }
                 phase = .failed(error)
@@ -321,8 +333,48 @@ struct AddItemSheet: View {
         }
     }
 
-    private func handle(_ outcome: LookupOutcome) {
-        let item = outcome.item
+    /// Chosen from the results, this runs the normal chain against the
+    /// product's own page — the same path a pasted link takes.
+    private func choose(_ candidate: ProductCandidate) {
+        workTask?.cancel()
+        phase = .searching
+        runLookup(for: candidate.productURL.absoluteString, applyingDetails: true)
+    }
+
+    private func runLookup(for text: String, applyingDetails: Bool) {
+        progress.message = LookupStage.validating.message
+
+        let credentials = settings.credentials
+        let isOnline = network.isOnline
+        let progressTracker = self.progress
+
+        workTask = Task {
+            do {
+                let outcome = try await lookup.lookup(
+                    urlText: text,
+                    nameText: nil,
+                    credentials: credentials,
+                    isOnline: isOnline,
+                    onStage: { stage in
+                        Task { @MainActor in progressTracker.message = stage.message }
+                    }
+                )
+                guard !Task.isCancelled else { return }
+                handle(outcome, applyingDetails: applyingDetails)
+            } catch let error as LookupError {
+                guard !Task.isCancelled, error != .cancelled else { return }
+                phase = .failed(error)
+            } catch {
+                guard !Task.isCancelled else { return }
+                phase = .failed(.providerUnavailable(provider: nil))
+            }
+        }
+    }
+
+    private func handle(_ outcome: LookupOutcome, applyingDetails: Bool) {
+        var item = outcome.item
+        if applyingDetails { applyDetails(to: &item) }
+
         phase = .input
         warning = outcome.partialFailure
         draft = item
@@ -333,6 +385,8 @@ struct AddItemSheet: View {
             retailer: item.retailer
         ) {
             duplicate = existing
+            // Surfaced on the input screen, so step back to it.
+            path = []
             return
         }
         path.append(.confirm)
@@ -344,6 +398,94 @@ struct AddItemSheet: View {
     }
 }
 
+/// The results of a search by name. A picture and a price are what actually
+/// let someone recognise the thing they meant.
+private struct CandidatePicker: View {
+    let candidates: [ProductCandidate]
+    let query: String
+    var onChoose: (ProductCandidate) -> Void
+    var onAddByName: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(candidates) { candidate in
+                    Button {
+                        onChoose(candidate)
+                    } label: {
+                        CandidateRow(candidate: candidate)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                Text("Results for “\(query)”")
+                    .textCase(nil)
+            } footer: {
+                Text("Choosing one reads its own page for the price, picture and details.")
+            }
+
+            Section {
+                Button {
+                    onAddByName()
+                } label: {
+                    Label(String(localized: "None of These — Add by Name"), systemImage: "square.and.pencil")
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(Text("Choose the Right One"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct CandidateRow: View {
+    let candidate: ProductCandidate
+
+    @ScaledMetric(relativeTo: .body) private var thumbnailSize: CGFloat = 54
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProductThumbnail(url: candidate.imageURL, size: thumbnailSize)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(candidate.name)
+                    .font(.subheadline)
+                    .lineLimit(2)
+                    .foregroundStyle(.primary)
+                if let price = candidate.price {
+                    Text(price.formatted)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                } else {
+                    Text("No price shown")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var accessibilityLabel: String {
+        var parts = [candidate.name]
+        if let price = candidate.price {
+            parts.append(price.accessibleDescription)
+        } else {
+            parts.append(String(localized: "no price shown"))
+        }
+        return parts.joined(separator: ", ")
+    }
+}
+
 nonisolated enum AddPhase: Equatable {
     case input
     case searching
@@ -351,6 +493,7 @@ nonisolated enum AddPhase: Equatable {
 }
 
 nonisolated enum AddRoute: Hashable {
+    case candidates
     case confirm
 }
 

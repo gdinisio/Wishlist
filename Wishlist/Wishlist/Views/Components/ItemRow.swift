@@ -71,6 +71,11 @@ struct ItemRow: View {
             PriceChangeLabel(change: change)
         } else if item.availability.isNoteworthy, !item.isObtained {
             AvailabilityBadge(availability: item.availability, isCompact: true)
+        } else if let variant = item.variantSummary {
+            Text(variant)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 
@@ -111,6 +116,9 @@ struct ItemRow: View {
         }
         if let change = item.priceChange, !item.isObtained {
             parts.append(change.label)
+        }
+        if let variant = item.variantSummary {
+            parts.append(variant)
         }
         return parts.joined(separator: ", ")
     }

@@ -163,6 +163,24 @@ changes to any view.
 
 ---
 
+## Adding an item
+
+One field takes either a link or a name; the app decides which it is.
+
+**From a link** — the address is extracted from whatever you paste, including
+surrounding text, then read through the provider chain.
+
+**From a name** — there is no dependable free product-search API, so Wishlist
+doesn't pretend to have one. It asks your Amazon storefront to search, parses
+the results page with the same free reader used elsewhere, and shows you real
+results with pictures and prices. Choosing one runs the normal lookup against
+that product's own page, so a name-added item is exactly as verified as a
+link-added one. Optional **colour** and **size** narrow the search and stay with
+the item.
+
+When a store answers with a human check instead of a page, that is reported as
+what it is rather than as a missing product.
+
 ## Organising and budgeting
 
 **Collections** are optional groupings you assign per item — a room, a person,

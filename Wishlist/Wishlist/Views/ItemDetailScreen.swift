@@ -230,6 +230,9 @@ struct ItemDetailScreen: View {
             if let category = item.category, !category.isEmpty {
                 LabeledContent(String(localized: "Category"), value: category)
             }
+            if let variant = item.variantSummary {
+                LabeledContent(String(localized: "Variant"), value: variant)
+            }
             if let collection = item.collectionName, !collection.isEmpty {
                 LabeledContent(String(localized: "Collection"), value: collection)
             }

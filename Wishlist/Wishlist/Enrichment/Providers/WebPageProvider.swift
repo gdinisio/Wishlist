@@ -51,6 +51,15 @@ nonisolated struct WebPageProvider: ProductDataProvider {
         // for Amazon its own markup, which is the only thing on those pages
         // that actually carries a price.
         let html = HTMLParser.decode(body, contentTypeHeader: contentType)
+        // A challenge page parses to nothing. Reporting "no details found"
+        // would blame the product for the store's gatekeeping.
+        if AmazonSearchParser.looksLikeBotCheck(html), link.isAmazon {
+            throw LookupError.providerRejected(
+                provider: displayName,
+                detail: String(localized: "Amazon asked for a human check instead of the page. Try again shortly, or add an Amazon API key in Settings for reliable results.")
+            )
+        }
+
         let document = HTMLParser.parse(html)
 
         var snapshot = StructuredDataParser.parse(

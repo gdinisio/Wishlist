@@ -232,6 +232,26 @@ nonisolated enum HTMLParser {
         return (value?.isEmpty ?? true) ? nil : value
     }
 
+    /// Attributes of the first tag whose opening contains `needle`, searching
+    /// only after `marker` when given. Used to read a search result's image and
+    /// its alt text — which on most storefronts is the product title — from one
+    /// element.
+    static func attributes(
+        ofFirstTagContaining needle: String,
+        in html: String,
+        after marker: String? = nil
+    ) -> [String: String] {
+        var searchStart = html.startIndex
+        if let marker {
+            guard let markerRange = html.range(of: marker) else { return [:] }
+            searchStart = markerRange.upperBound
+        }
+        guard let match = html.range(of: needle, range: searchStart..<html.endIndex),
+              let tag = enclosingTag(of: match, in: html)
+        else { return [:] }
+        return parseAttributes(in: html[html.index(after: tag.lowerBound)..<html.index(before: tag.upperBound)])
+    }
+
     /// Text of the first element whose opening tag contains `needle`, searching
     /// only after `marker` when one is given — which is how a price is found
     /// inside a specific block rather than anywhere on the page.

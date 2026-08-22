@@ -15,10 +15,19 @@ private nonisolated struct ProductLookupKey: EnvironmentKey {
     static let defaultValue: ProductLookupService = .makeDefault()
 }
 
+private nonisolated struct ProductSearchKey: EnvironmentKey {
+    static let defaultValue = ProductSearchService(http: URLSessionHTTPClient())
+}
+
 extension EnvironmentValues {
     nonisolated var productLookup: ProductLookupService {
         get { self[ProductLookupKey.self] }
         set { self[ProductLookupKey.self] = newValue }
+    }
+
+    nonisolated var productSearch: ProductSearchService {
+        get { self[ProductSearchKey.self] }
+        set { self[ProductSearchKey.self] = newValue }
     }
 }
 
