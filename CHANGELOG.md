@@ -21,6 +21,26 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 5.2 — Prices know what currency they are in
+
+Three gaps meant a price could be saved as a bare number, or in the wrong money.
+
+- **A country domain now sets the currency.** It was only ever derived from an
+  Amazon marketplace, so a price from johnlewis.com or argos.co.uk arrived with
+  no currency at all and displayed as a plain number. Any country domain now
+  implies its currency — `.co.uk` is pounds, `.de` is euros, and so on.
+- **An Amazon marketplace is now decisive, not a hint.** Each Amazon storefront
+  trades in exactly one currency, so a price read from amazon.co.uk is in
+  pounds whatever symbol was scraped beside it. A stray "$" in a comparison
+  table on the page can no longer make a price dollars.
+- **One currency setting**, in Settings, used both for the budget and as the
+  last resort when neither the page nor the domain says. It defaults to your
+  region's currency, so a UK device starts in GBP.
+
+Settled in one place for every provider, so the Amazon API, the third-party
+reader, the page reader and the assistant all agree. None of it invents a
+price — it only names one already found.
+
 ## 5.1 — Correct request shape for junglee/Amazon-crawler
 
 The default Apify actor's request body was a guess (`startUrls` / `maxItems`)

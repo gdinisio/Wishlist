@@ -42,7 +42,9 @@ final class SettingsStore {
     /// What the user has to spend, as typed. Kept as text so an empty field
     /// stays meaningfully empty rather than becoming zero.
     var availableToSpendText: String = ""
-    var budgetCurrencyCode: String = SettingsStore.localCurrencyCode
+    /// One currency setting, used for the budget and as the last resort for a
+    /// price a shop listed without saying what money it was in.
+    var defaultCurrencyCode: String = SettingsStore.localCurrencyCode
 
     // MARK: - Alerts
 
@@ -92,7 +94,8 @@ final class SettingsStore {
             ?? .dateAddedDescending
 
         availableToSpendText = defaults.string(forKey: Key.availableToSpend) ?? ""
-        budgetCurrencyCode = defaults.string(forKey: Key.budgetCurrency) ?? SettingsStore.localCurrencyCode
+        // Reads the original key so an existing choice carries over.
+        defaultCurrencyCode = defaults.string(forKey: Key.budgetCurrency) ?? SettingsStore.localCurrencyCode
         notifiesPriceDrops = defaults.object(forKey: Key.notifiesPriceDrops) as? Bool ?? false
 
         amazonDataService = defaults.string(forKey: Key.amazonDataService)
@@ -134,7 +137,8 @@ final class SettingsStore {
             microlinkKey: microlinkKey,
             allowsWebPageLookup: allowsWebPageLookup,
             intelligence: intelligence,
-            amazonData: amazonData
+            amazonData: amazonData,
+            defaultCurrencyCode: defaultCurrencyCode
         )
     }
 
@@ -152,7 +156,7 @@ final class SettingsStore {
     /// What the user has to spend, when they have said. `nil` means "not set",
     /// which is different from zero and is shown differently.
     var availableToSpend: Money? {
-        PriceParser.parse(availableToSpendText, currencyHint: budgetCurrencyCode)
+        PriceParser.parse(availableToSpendText, currencyHint: defaultCurrencyCode)
     }
 
     static var localCurrencyCode: String {
@@ -208,7 +212,7 @@ final class SettingsStore {
             _ = shortensTitles
             _ = suggestsCategories
             _ = availableToSpendText
-            _ = budgetCurrencyCode
+            _ = defaultCurrencyCode
             _ = notifiesPriceDrops
             _ = amazonDataKey
             _ = amazonDataService
@@ -261,7 +265,7 @@ final class SettingsStore {
         defaults.set(hapticsEnabled, forKey: Key.haptics)
         defaults.set(sortOrder.rawValue, forKey: Key.sortOrder)
         defaults.set(availableToSpendText, forKey: Key.availableToSpend)
-        defaults.set(budgetCurrencyCode, forKey: Key.budgetCurrency)
+        defaults.set(defaultCurrencyCode, forKey: Key.budgetCurrency)
         defaults.set(notifiesPriceDrops, forKey: Key.notifiesPriceDrops)
         defaults.set(amazonDataService.rawValue, forKey: Key.amazonDataService)
         defaults.set(amazonDataActor, forKey: Key.amazonDataActor)

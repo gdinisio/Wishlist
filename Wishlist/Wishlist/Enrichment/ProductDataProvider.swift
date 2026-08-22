@@ -63,6 +63,9 @@ nonisolated struct LookupCredentials: Sendable, Equatable {
     var intelligence: IntelligenceSettings = IntelligenceSettings()
     /// Optional third-party Amazon reader. Off unless the user turns it on.
     var amazonData: AmazonDataSettings = AmazonDataSettings()
+    /// What to call a price that arrives with no currency attached and whose
+    /// storefront gives no clue either.
+    var defaultCurrencyCode: String = "USD"
 
     var hasAmazonPAAPI: Bool {
         isPresent(amazonAccessKey) && isPresent(amazonSecretKey) && isPresent(amazonPartnerTag)

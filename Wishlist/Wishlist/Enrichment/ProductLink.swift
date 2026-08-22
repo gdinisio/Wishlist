@@ -25,7 +25,21 @@ nonisolated struct ProductLink: Hashable, Sendable {
 
     var isAmazon: Bool { amazonMarketplace != nil }
 
-    /// Currency implied by the storefront. Used only as a hint when a price
-    /// carries an ambiguous symbol, never to invent a missing price.
-    var currencyHint: String? { amazonMarketplace?.currencyCode }
+    /// The currency this storefront trades in: certain for an Amazon
+    /// marketplace, strongly implied by a country domain, and unknown for a
+    /// `.com` that could be anywhere.
+    var storefrontCurrency: String? {
+        if let amazonMarketplace { return amazonMarketplace.currencyCode }
+        return CurrencyRegion.currency(forHost: host)
+    }
+
+    /// Whether the storefront's currency is a fact rather than an inference.
+    /// Amazon's marketplaces each trade in exactly one currency, so a price
+    /// read from amazon.co.uk is in pounds whatever symbol happened to be
+    /// scraped alongside it.
+    var isCurrencyCertain: Bool { amazonMarketplace != nil }
+
+    /// Used when a price is found without a currency of its own. Never used to
+    /// invent a missing price.
+    var currencyHint: String? { storefrontCurrency }
 }

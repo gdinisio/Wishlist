@@ -120,20 +120,24 @@ struct SettingsScreen: View {
                 }
 
                 Section {
-                    HStack {
-                        TextField(String(localized: "Amount"), text: $settings.availableToSpendText)
-                            .keyboardType(.decimalPad)
-                            .focused($isBudgetFocused)
-                            .accessibilityLabel(Text("Amount available to spend"))
-                        Divider()
-                        Picker(String(localized: "Currency"), selection: $settings.budgetCurrencyCode) {
-                            ForEach(CurrencyOptions.including(settings.budgetCurrencyCode), id: \.self) { code in
-                                Text(code).tag(code)
-                            }
+                    Picker(selection: $settings.defaultCurrencyCode) {
+                        ForEach(CurrencyOptions.including(settings.defaultCurrencyCode), id: \.self) { code in
+                            Text(code).tag(code)
                         }
-                        .labelsHidden()
-                        .accessibilityLabel(Text("Budget currency"))
+                    } label: {
+                        Label(String(localized: "Currency"), systemImage: "banknote")
                     }
+                } header: {
+                    Text("Currency")
+                } footer: {
+                    Text("Used for your budget, and for a price a shop lists without saying which money it is in. Amazon and country domains state their own — this only fills the gaps.")
+                }
+
+                Section {
+                    TextField(String(localized: "Amount"), text: $settings.availableToSpendText)
+                        .keyboardType(.decimalPad)
+                        .focused($isBudgetFocused)
+                        .accessibilityLabel(Text("Amount available to spend"))
                 } header: {
                     Text("Available to Spend")
                 } footer: {

@@ -115,7 +115,12 @@ nonisolated final class ProductLookupService: Sendable {
                     partialFailure: .offline
                 )
             }
-            let (snapshot, failure) = await runChain(request, credentials: credentials, onStage: onStage)
+            let (rawSnapshot, failure) = await runChain(request, credentials: credentials, onStage: onStage)
+            let snapshot = Self.normalisingCurrency(
+                rawSnapshot,
+                link: nil,
+                defaultCurrency: credentials.defaultCurrencyCode
+            )
             return LookupOutcome(
                 snapshot: await polished(snapshot, credentials: credentials, onStage: onStage),
                 link: nil,
@@ -140,7 +145,12 @@ nonisolated final class ProductLookupService: Sendable {
             searchTerm: trimmedName.isEmpty ? nil : trimmedName,
             prefetchedPage: prefetched
         )
-        let (snapshot, failure) = await runChain(request, credentials: credentials, onStage: onStage)
+        let (rawSnapshot, failure) = await runChain(request, credentials: credentials, onStage: onStage)
+        let snapshot = Self.normalisingCurrency(
+            rawSnapshot,
+            link: link,
+            defaultCurrency: credentials.defaultCurrencyCode
+        )
 
         if snapshot.isEmpty, let failure {
             throw failure
@@ -153,6 +163,38 @@ nonisolated final class ProductLookupService: Sendable {
             fallbackName: trimmedName.isEmpty ? (link.retailer.name) : trimmedName,
             partialFailure: snapshot.isPartial ? failure : nil
         )
+    }
+
+    /// Settles what currency a price is in.
+    ///
+    /// Three rules, in order. An Amazon marketplace trades in exactly one
+    /// currency, so its price is in that currency whatever symbol was scraped
+    /// beside it — a stray "$" in a comparison table on amazon.co.uk does not
+    /// make a price dollars. Otherwise a currency the page actually stated is
+    /// kept. Failing both, the storefront's country domain decides, and failing
+    /// that, the user's own default.
+    ///
+    /// None of this invents a price. It only names one already found.
+    static func normalisingCurrency(
+        _ snapshot: ProductSnapshot,
+        link: ProductLink?,
+        defaultCurrency: String
+    ) -> ProductSnapshot {
+        guard let price = snapshot.price else { return snapshot }
+
+        let resolved: String
+        if let link, link.isCurrencyCertain, let certain = link.storefrontCurrency {
+            resolved = certain
+        } else if let stated = price.currencyCode, !stated.isEmpty {
+            resolved = stated
+        } else {
+            resolved = link?.storefrontCurrency ?? defaultCurrency
+        }
+
+        guard resolved != price.currencyCode else { return snapshot }
+        var updated = snapshot
+        updated.price = Money(amount: price.amount, currencyCode: resolved)
+        return updated
     }
 
     /// Shortens a keyword-stuffed title and fills in a missing category, when
@@ -194,7 +236,11 @@ nonisolated final class ProductLookupService: Sendable {
                 onStage: { _ in }
             )
             if snapshot.isEmpty { throw failure ?? LookupError.noProductData }
-            return snapshot
+            return Self.normalisingCurrency(
+                snapshot,
+                link: link,
+                defaultCurrency: credentials.defaultCurrencyCode
+            )
         }
     }
 
