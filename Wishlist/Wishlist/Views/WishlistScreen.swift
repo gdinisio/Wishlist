@@ -82,12 +82,6 @@ struct WishlistScreen: View {
                                     Label(String(localized: "Refresh Prices"), systemImage: "arrow.clockwise")
                                 }
                                 .disabled(repository.isRefreshing || repository.activeItems.isEmpty)
-
-                                Button {
-                                    isAskingGenerally = true
-                                } label: {
-                                    Label(String(localized: "Ask the Assistant"), systemImage: "sparkles")
-                                }
                             }
                         } label: {
                             // The control keeps its place; only its symbol
@@ -101,6 +95,12 @@ struct WishlistScreen: View {
                                     ? "line.3.horizontal.decrease.circle.fill"
                                     : "ellipsis.circle"
                             )
+                        }
+
+                        Button {
+                            isAskingGenerally = true
+                        } label: {
+                            Label(String(localized: "Ask the Assistant"), systemImage: "sparkles")
                         }
 
                         Button {

@@ -166,10 +166,16 @@ struct AskAssistantSheet: View {
                 Button {
                     send(draft)
                 } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
-                        .symbolRenderingMode(.hierarchical)
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(canSend ? Color.white : Color.secondary)
+                        .frame(width: 36, height: 36)
+                        .glassEffect(
+                            .regular.tint(canSend ? Color.accentColor : nil).interactive(),
+                            in: Circle()
+                        )
                 }
+                .buttonStyle(.plain)
                 .disabled(!canSend)
                 .accessibilityLabel(Text("Send"))
             }
@@ -286,7 +292,7 @@ private struct ChatTurnView: View {
     private var content: some View {
         switch turn.role {
         case .assistant:
-            Text(AssistantMarkdown.formatted(turn.text))
+            AssistantMessageView(text: turn.text)
         case .user:
             Text(turn.text)
         }

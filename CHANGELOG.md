@@ -21,6 +21,19 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 5.4 — Tables, a prominent send button, assistant in the toolbar
+
+- **Markdown tables render as tables.** `AttributedString` has no way to
+  express one, so a reply containing a table arrived as a wall of pipes. Tables
+  are now lifted out of the reply and laid out in a real grid, with the rest of
+  the message still formatted as before. A table reads as one unit in VoiceOver
+  rather than cell by cell.
+- **The send button is prominent glass** — a tinted, interactive circle that
+  fills with the accent colour when there is something to send, rather than a
+  flat glyph.
+- **The assistant has its own toolbar button** on the wishlist instead of being
+  buried in the overflow menu.
+
 ## 5.3 — Assistant replies render properly
 
 - **Markdown is now rendered instead of shown.** SwiftUI only parses markdown
