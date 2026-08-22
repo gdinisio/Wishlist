@@ -21,6 +21,19 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 5.3 — Assistant replies render properly
+
+- **Markdown is now rendered instead of shown.** SwiftUI only parses markdown
+  in string *literals*, so a reply held in a variable arrived with its asterisks
+  visible — `**Aa**` rather than **Aa**. Assistant replies are now parsed into
+  an `AttributedString`: bold, italic, code and links render, line breaks
+  survive, headings become plain lines and `-` bullets become real ones. What
+  the user typed is still shown exactly as typed.
+- VoiceOver reads the resolved text rather than spelling out the punctuation
+  around every bold word.
+- **The compose field is Liquid Glass** — a floating rounded capsule that
+  content scrolls beneath, rather than a flat bar pinned across the bottom.
+
 ## 5.2 — Prices know what currency they are in
 
 Three gaps meant a price could be saved as a bare number, or in the wrong money.

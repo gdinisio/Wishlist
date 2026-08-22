@@ -173,16 +173,20 @@ struct AskAssistantSheet: View {
                 .disabled(!canSend)
                 .accessibilityLabel(Text("Send"))
             }
+            .padding(.leading, 16)
+            .padding(.trailing, 8)
+            .padding(.vertical, 10)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
 
             // Always visible, because the caveat applies to every answer.
             Text("Suggestions come from the model’s own knowledge. Prices and stock aren’t checked.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 6)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.bar)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Sending
@@ -257,7 +261,7 @@ private struct ChatTurnView: View {
         HStack {
             if turn.role == .user { Spacer(minLength: 44) }
 
-            Text(turn.text)
+            content
                 .font(.body)
                 .textSelection(.enabled)
                 .multilineTextAlignment(.leading)
@@ -272,8 +276,20 @@ private struct ChatTurnView: View {
         .accessibilityLabel(
             turn.role == .user
                 ? Text("You asked: \(turn.text)")
-                : Text("Assistant: \(turn.text)")
+                : Text("Assistant: \(AssistantMarkdown.plain(turn.text))")
         )
+    }
+
+    /// The model's reply is parsed as markdown; what the user typed is shown
+    /// exactly as they typed it.
+    @ViewBuilder
+    private var content: some View {
+        switch turn.role {
+        case .assistant:
+            Text(AssistantMarkdown.formatted(turn.text))
+        case .user:
+            Text(turn.text)
+        }
     }
 
     private var background: AnyShapeStyle {
