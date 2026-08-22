@@ -17,8 +17,15 @@ vA.B - very concise description of changes
 - B is a plain counter, not a decimal: `v1.9` → `v1.10` → `v1.11`.
 
 Keep the subject under ~60 characters. Put the reasoning in the body: what
-changed, and why it is the right call. Update `CHANGELOG.md` in the same commit,
-and `MARKETING_VERSION` in the project when A changes.
+changed, and why it is the right call.
+
+**Every commit updates all three, together:**
+
+1. the commit subject,
+2. `CHANGELOG.md`,
+3. `MARKETING_VERSION` in `project.pbxproj` — *every* time, not only when A
+   changes. Settings shows this value, so the version on screen must match the
+   version that was committed.
 
 ## Design rules
 

@@ -159,6 +159,9 @@ struct AskAssistantSheet: View {
                     axis: .vertical
                 )
                 .lineLimit(1...5)
+                // Matches the send button's height, so one line of text sits
+                // level with it instead of on the row's baseline.
+                .frame(minHeight: 36)
                 .focused($isComposerFocused)
                 .submitLabel(.send)
                 .onSubmit { send(draft) }

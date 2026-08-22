@@ -24,6 +24,8 @@ struct WishlistScreen: View {
     @State private var addExit: AddItemExit = .none
     @State private var askingAbout: WishlistItem?
     @State private var isAskingGenerally = false
+    @State private var selection = Set<WishlistItem.ID>()
+    @State private var editMode: EditMode = .inactive
     @State private var selectedCollection: String?
     @State private var onlyWithinBudget = false
 
@@ -42,6 +44,52 @@ struct WishlistScreen: View {
                     prompt: Text("Search Wishlist")
                 )
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        if !visibleItems.isEmpty {
+                            EditButton()
+                        }
+                    }
+
+                    if editMode.isEditing {
+                        ToolbarItemGroup(placement: .bottomBar) {
+                            Button {
+                                repository.setPinned(true, forIDs: selection)
+                                editMode = .inactive
+                            } label: {
+                                Label(String(localized: "Pin"), systemImage: "pin")
+                            }
+                            .disabled(selection.isEmpty)
+
+                            Spacer()
+
+                            Menu {
+                                Button(String(localized: "None")) {
+                                    repository.setCollection(nil, forIDs: selection)
+                                    editMode = .inactive
+                                }
+                                ForEach(repository.collectionNames, id: \.self) { name in
+                                    Button(name) {
+                                        repository.setCollection(name, forIDs: selection)
+                                        editMode = .inactive
+                                    }
+                                }
+                            } label: {
+                                Label(String(localized: "Collection"), systemImage: "folder")
+                            }
+                            .disabled(selection.isEmpty)
+
+                            Spacer()
+
+                            Button(role: .destructive) {
+                                repository.delete(ids: Array(selection))
+                                editMode = .inactive
+                            } label: {
+                                Label(String(localized: "Delete"), systemImage: "trash")
+                            }
+                            .disabled(selection.isEmpty)
+                        }
+                    }
+
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         Menu {
                             Picker(selection: $settings.sortOrder) {
@@ -195,7 +243,7 @@ struct WishlistScreen: View {
     }
 
     private var list: some View {
-        List {
+        List(selection: $selection) {
             if !pinnedItems.isEmpty {
                 Section {
                     ForEach(pinnedItems) { item in
@@ -224,6 +272,12 @@ struct WishlistScreen: View {
             }
         }
         .listStyle(.plain)
+        .environment(\.editMode, $editMode)
+        .onChange(of: editMode) { _, mode in
+            // A selection that outlives edit mode would act on rows the user
+            // can no longer see they picked.
+            if !mode.isEditing { selection.removeAll() }
+        }
     }
 
     /// Shared by the pinned and unpinned sections, so the two can never drift

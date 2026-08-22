@@ -69,6 +69,14 @@ struct ItemDetailScreen: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isAsking = true
+                } label: {
+                    Label(String(localized: "Ask About This"), systemImage: "sparkles")
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     ItemActionsMenu(
                         item: item,

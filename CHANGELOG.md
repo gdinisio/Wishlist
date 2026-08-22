@@ -21,6 +21,22 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 6.1 — Edit mode, assistant on items, composer alignment
+
+- **The wishlist's leading toolbar slot now holds Edit**, which is where iOS
+  puts it. Selecting several items at once gives a bottom bar to pin them, move
+  them to a collection, or delete them — the three things that are genuinely
+  tedious one at a time. The selection clears when edit mode ends, so it can
+  never act on rows you can no longer see you picked.
+- **The assistant has its own button on an item's screen too**, matching the
+  wishlist, rather than only appearing inside the overflow menu.
+- **The chat placeholder sits level with the send button.** The field was
+  aligned to the row's baseline while the 36pt send button set the height, so a
+  single line looked low; it now shares the button's minimum height.
+
+From this release the in-app version in Settings is bumped on every commit, not
+only on major ones, so what the app reports always matches what was shipped.
+
 ## 6.0 — Pinning
 
 Pin the things you want most, or want soonest. Pinned items get their own
