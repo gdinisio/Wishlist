@@ -22,13 +22,14 @@ so they are entered once and never asked for again.
 | --- | --- | --- | --- |
 | **Product page** | Free | None | Reads the structured data (schema.org JSON‑LD, Open Graph) that stores already publish, plus Amazon's own page markup. Works for most retailers. |
 | **Amazon Product Advertising API** | Free — Amazon charges nothing per request | Access key, secret key, partner tag | Authoritative Amazon prices, stock and images. Requests are signed with AWS Signature V4 on device. Needs an approved [Amazon Associates](https://affiliate-program.amazon.com) account. |
+| **Amazon data service** (optional) | Bring your own key; free allowances vary and change | API key | A third-party reader for Amazon — Apify, HasData, or any custom endpoint. Buys reliability against Amazon's human checks, not data the page reader cannot get. |
 | **Microlink** | Free tier, no key | None | Last-resort fallback for pages that refuse to be read directly; recovers a name and picture. A paid key can be added but is never required. |
 | **Assistant** (optional) | Groq free tier, or Claude paid | API key | Reads pages no parser can handle, shortens keyword-stuffed titles, and suggests categories. Off by default. See below. |
 
 **Every service Wishlist uses is free**, and the app is fully functional with no
 keys at all. Nothing here bills per request.
 
-For an Amazon link the chain runs **PA‑API → product page → Microlink**, merging
+For an Amazon link the chain runs **PA‑API → third-party reader → product page → Microlink**, merging
 results field by field, and stops as soon as it has everything. For any other
 retailer it goes straight to the product page.
 

@@ -61,6 +61,8 @@ nonisolated struct LookupCredentials: Sendable, Equatable {
     var allowsWebPageLookup: Bool = true
     /// Optional language-model assistance. Off unless the user turns it on.
     var intelligence: IntelligenceSettings = IntelligenceSettings()
+    /// Optional third-party Amazon reader. Off unless the user turns it on.
+    var amazonData: AmazonDataSettings = AmazonDataSettings()
 
     var hasAmazonPAAPI: Bool {
         isPresent(amazonAccessKey) && isPresent(amazonSecretKey) && isPresent(amazonPartnerTag)

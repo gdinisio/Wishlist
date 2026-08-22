@@ -45,6 +45,19 @@ struct SettingsScreen: View {
                     }
 
                     NavigationLink {
+                        AmazonDataSettingsView()
+                    } label: {
+                        ProviderRow(
+                            title: String(localized: "Amazon Data"),
+                            symbolName: "shippingbox",
+                            isConfigured: settings.amazonData.isConfigured,
+                            detail: settings.amazonData.isConfigured
+                                ? settings.amazonDataService.displayName
+                                : String(localized: "Off")
+                        )
+                    }
+
+                    NavigationLink {
                         MicrolinkSettingsView()
                     } label: {
                         ProviderRow(

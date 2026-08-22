@@ -96,9 +96,10 @@ nonisolated enum CredentialKey {
     static let microlinkKey = "microlink.apiKey"
     static let claudeKey = "claude.apiKey"
     static let groqKey = "groq.apiKey"
+    static let amazonDataKey = "amazonData.apiKey"
 
     static let all = [
         amazonAccessKey, amazonSecretKey, amazonPartnerTag, microlinkKey,
-        claudeKey, groqKey, legacyRainforestKey
+        claudeKey, groqKey, amazonDataKey, legacyRainforestKey
     ]
 }

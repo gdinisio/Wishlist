@@ -67,15 +67,17 @@ nonisolated final class ProductLookupService: Sendable {
         self.models = models
     }
 
-    /// The chain used by the app, and every step of it is free to use: Amazon's
-    /// own API first for Amazon links, then the store's product page, then a
-    /// rendering service for pages that refuse to be read directly.
+    /// The chain, most authoritative first: Amazon's own API, then whichever
+    /// third-party reader the user has a key for, then the store's product
+    /// page, then a rendering service for pages that refuse to be read.
+    /// Everything after the first two needs no key at all.
     static func makeDefault(http: HTTPClient = URLSessionHTTPClient()) -> ProductLookupService {
         let models = LanguageModelRouter(http: http)
         return ProductLookupService(
             http: http,
             providers: [
                 AmazonPAAPIProvider(http: http),
+                AmazonDataProvider(http: http),
                 WebPageProvider(http: http, models: models),
                 MicrolinkProvider(http: http)
             ],

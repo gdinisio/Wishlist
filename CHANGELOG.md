@@ -21,6 +21,32 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 5.0 — Third-party Amazon readers
+
+An optional middle path between Amazon's own API (free, but gated behind an
+Associates account with tax identity and qualifying sales) and reading the
+product page (free and keyless, but Amazon shows a human check often enough to
+be annoying).
+
+**No single service is hard-coded.** Three are offered — Apify, HasData, and a
+Custom address for anything else — because their free allowances and response
+shapes both change without notice, and this app has already been broken once by
+a provider retiring something out from under it.
+
+- **Every field is read through a list of candidate paths**, not one fixed
+  shape, so a service returning `price.value` and one returning
+  `product.price.raw` both work. Anything not found stays unavailable, exactly
+  as elsewhere.
+- **It sits second in the chain** — after Amazon's own API, before the free page
+  reader — so the most authoritative configured source wins.
+- **"Use for Price Refreshes" can be turned off.** Refreshing every item is what
+  actually burns a metered allowance; with it off, adding items still uses the
+  service and refreshes fall back to the page reader.
+- **A local monthly request count** is shown in Settings, because these
+  allowances fail quietly and nothing else in the app would tell you.
+- Settings says plainly that this buys reliability rather than new data, and
+  that free tiers change.
+
 ## 4.0 — Add by name, and a tougher link reader
 
 ### One field instead of two

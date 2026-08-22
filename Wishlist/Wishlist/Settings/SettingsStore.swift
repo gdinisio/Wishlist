@@ -25,6 +25,7 @@ final class SettingsStore {
     var microlinkKey: String = ""
     var claudeKey: String = ""
     var groqKey: String = ""
+    var amazonDataKey: String = ""
 
     // MARK: - Preferences (stored in user defaults)
 
@@ -46,6 +47,13 @@ final class SettingsStore {
     // MARK: - Alerts
 
     var notifiesPriceDrops: Bool = false
+
+    // MARK: - Third-party Amazon reader
+
+    var amazonDataService: AmazonDataService = .off
+    var amazonDataActor: String = AmazonDataSettings.defaultActor
+    var amazonDataTemplate: String = ""
+    var amazonDataUsedForRefreshes: Bool = true
 
     // MARK: - Language model assistance (off unless turned on)
 
@@ -70,6 +78,7 @@ final class SettingsStore {
         microlinkKey = keychain.string(forKey: CredentialKey.microlinkKey) ?? ""
         claudeKey = keychain.string(forKey: CredentialKey.claudeKey) ?? ""
         groqKey = keychain.string(forKey: CredentialKey.groqKey) ?? ""
+        amazonDataKey = keychain.string(forKey: CredentialKey.amazonDataKey) ?? ""
 
         amazonMarketplace = defaults.string(forKey: Key.marketplace)
             .flatMap(AmazonMarketplace.init(rawValue:))
@@ -85,6 +94,13 @@ final class SettingsStore {
         availableToSpendText = defaults.string(forKey: Key.availableToSpend) ?? ""
         budgetCurrencyCode = defaults.string(forKey: Key.budgetCurrency) ?? SettingsStore.localCurrencyCode
         notifiesPriceDrops = defaults.object(forKey: Key.notifiesPriceDrops) as? Bool ?? false
+
+        amazonDataService = defaults.string(forKey: Key.amazonDataService)
+            .flatMap(AmazonDataService.init(rawValue:))
+            ?? .off
+        amazonDataActor = defaults.string(forKey: Key.amazonDataActor) ?? AmazonDataSettings.defaultActor
+        amazonDataTemplate = defaults.string(forKey: Key.amazonDataTemplate) ?? ""
+        amazonDataUsedForRefreshes = defaults.object(forKey: Key.amazonDataRefreshes) as? Bool ?? true
 
         intelligenceProvider = defaults.string(forKey: Key.intelligenceProvider)
             .flatMap(IntelligenceProvider.init(rawValue:))
@@ -117,7 +133,19 @@ final class SettingsStore {
             amazonMarketplace: amazonMarketplace,
             microlinkKey: microlinkKey,
             allowsWebPageLookup: allowsWebPageLookup,
-            intelligence: intelligence
+            intelligence: intelligence,
+            amazonData: amazonData
+        )
+    }
+
+    /// The third-party reader configuration, as a value the chain can carry.
+    var amazonData: AmazonDataSettings {
+        AmazonDataSettings(
+            service: amazonDataService,
+            apiKey: amazonDataKey,
+            actorIdentifier: amazonDataActor,
+            urlTemplate: amazonDataTemplate,
+            usedForRefreshes: amazonDataUsedForRefreshes
         )
     }
 
@@ -158,6 +186,7 @@ final class SettingsStore {
         microlinkKey = ""
         claudeKey = ""
         groqKey = ""
+        amazonDataKey = ""
     }
 
     // MARK: - Automatic persistence
@@ -181,6 +210,11 @@ final class SettingsStore {
             _ = availableToSpendText
             _ = budgetCurrencyCode
             _ = notifiesPriceDrops
+            _ = amazonDataKey
+            _ = amazonDataService
+            _ = amazonDataActor
+            _ = amazonDataTemplate
+            _ = amazonDataUsedForRefreshes
             _ = amazonMarketplace
             _ = allowsWebPageLookup
             _ = refreshOnLaunch
@@ -218,6 +252,7 @@ final class SettingsStore {
         keychain.set(microlinkKey, forKey: CredentialKey.microlinkKey)
         keychain.set(claudeKey, forKey: CredentialKey.claudeKey)
         keychain.set(groqKey, forKey: CredentialKey.groqKey)
+        keychain.set(amazonDataKey, forKey: CredentialKey.amazonDataKey)
 
         defaults.set(amazonMarketplace.rawValue, forKey: Key.marketplace)
         defaults.set(allowsWebPageLookup, forKey: Key.webPageLookup)
@@ -228,6 +263,10 @@ final class SettingsStore {
         defaults.set(availableToSpendText, forKey: Key.availableToSpend)
         defaults.set(budgetCurrencyCode, forKey: Key.budgetCurrency)
         defaults.set(notifiesPriceDrops, forKey: Key.notifiesPriceDrops)
+        defaults.set(amazonDataService.rawValue, forKey: Key.amazonDataService)
+        defaults.set(amazonDataActor, forKey: Key.amazonDataActor)
+        defaults.set(amazonDataTemplate, forKey: Key.amazonDataTemplate)
+        defaults.set(amazonDataUsedForRefreshes, forKey: Key.amazonDataRefreshes)
         defaults.set(intelligenceProvider.rawValue, forKey: Key.intelligenceProvider)
         defaults.set(claudeModel.rawValue, forKey: Key.claudeModel)
         defaults.set(groqModel, forKey: Key.groqModel)
@@ -261,6 +300,10 @@ final class SettingsStore {
         static let availableToSpend = "settings.availableToSpend"
         static let budgetCurrency = "settings.budgetCurrency"
         static let notifiesPriceDrops = "settings.notifiesPriceDrops"
+        static let amazonDataService = "settings.amazonDataService"
+        static let amazonDataActor = "settings.amazonDataActor"
+        static let amazonDataTemplate = "settings.amazonDataTemplate"
+        static let amazonDataRefreshes = "settings.amazonDataUsedForRefreshes"
         static let intelligenceProvider = "settings.intelligenceProvider"
         static let claudeModel = "settings.claudeModel"
         static let groqModel = "settings.groqModel"
