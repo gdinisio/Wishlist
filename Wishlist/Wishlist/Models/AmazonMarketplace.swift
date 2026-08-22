@@ -83,6 +83,34 @@ nonisolated enum AmazonMarketplace: String, CaseIterable, Codable, Sendable, Ide
         "webservices." + domain
     }
 
+    /// ISO 3166-1 alpha-2 country of this storefront. Some third-party readers
+    /// key their results on the country rather than the domain.
+    var countryCode: String {
+        switch self {
+        case .unitedStates: "US"
+        case .unitedKingdom: "GB"
+        case .germany: "DE"
+        case .france: "FR"
+        case .italy: "IT"
+        case .spain: "ES"
+        case .netherlands: "NL"
+        case .sweden: "SE"
+        case .poland: "PL"
+        case .belgium: "BE"
+        case .ireland: "IE"
+        case .canada: "CA"
+        case .mexico: "MX"
+        case .brazil: "BR"
+        case .japan: "JP"
+        case .australia: "AU"
+        case .singapore: "SG"
+        case .india: "IN"
+        case .unitedArabEmirates: "AE"
+        case .saudiArabia: "SA"
+        case .turkey: "TR"
+        }
+    }
+
     var currencyCode: String {
         switch self {
         case .unitedStates: "USD"

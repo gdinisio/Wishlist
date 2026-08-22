@@ -110,9 +110,19 @@ nonisolated struct AmazonDataProvider: ProductDataProvider {
             // Actors take a little while to start, so this waits longer than a
             // page fetch would.
             request.timeoutInterval = 90
+            // Verified against the junglee/amazon-crawler actor's own input
+            // schema — its field names (categoryOrProductUrls,
+            // maxItemsPerStartUrl, countryCode) are specific to it and are not
+            // a general Apify convention, unlike the run-sync endpoint itself.
+            // Fields left out (maxOffers, scrapeSellers, and so on) take the
+            // actor's own defaults, which already suit a single-product fetch.
             let body: JSONValue = [
-                "startUrls": [["url": .string(productURL)]],
-                "maxItems": 1
+                "categoryOrProductUrls": [["url": .string(productURL)]],
+                "maxItemsPerStartUrl": 1,
+                "maxSearchPagesPerStartUrl": 1,
+                "scrapeProductDetails": true,
+                "countryCode": .string(marketplace.countryCode),
+                "proxyCountry": "AUTO_SELECT_PROXY_COUNTRY"
             ]
             request.httpBody = try? body.encoded()
             return request

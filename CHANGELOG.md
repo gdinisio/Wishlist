@@ -21,6 +21,21 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 5.1 — Correct request shape for junglee/Amazon-crawler
+
+The default Apify actor's request body was a guess (`startUrls` / `maxItems`)
+made without access to the actor's own documentation, and it was wrong — the
+actor rejected it outright. Corrected against the actor's real input schema:
+
+- `startUrls` → `categoryOrProductUrls`
+- `maxItems` → `maxItemsPerStartUrl`
+- adds the actor's required `countryCode`, taken from the item's marketplace
+- adds `scrapeProductDetails: true` and bounds `maxSearchPagesPerStartUrl` to 1,
+  since a direct product link never needs to page through search results
+
+`AmazonMarketplace` gains a `countryCode` (ISO 3166-1 alpha-2) alongside its
+existing `currencyCode`, for readers that key on country rather than domain.
+
 ## 5.0 — Third-party Amazon readers
 
 An optional middle path between Amazon's own API (free, but gated behind an
