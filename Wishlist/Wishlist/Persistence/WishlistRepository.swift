@@ -116,26 +116,6 @@ final class WishlistRepository {
         scheduleSave()
     }
 
-    func setPinned(_ isPinned: Bool, forIDs ids: Set<WishlistItem.ID>) {
-        guard !ids.isEmpty else { return }
-        for index in items.indices where ids.contains(items[index].id) {
-            items[index].isPinned = isPinned
-            items[index].touch()
-        }
-        scheduleSave()
-    }
-
-    func setCollection(_ name: String?, forIDs ids: Set<WishlistItem.ID>) {
-        guard !ids.isEmpty else { return }
-        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolved = (trimmed?.isEmpty ?? true) ? nil : trimmed
-        for index in items.indices where ids.contains(items[index].id) {
-            items[index].collectionName = resolved
-            items[index].touch()
-        }
-        scheduleSave()
-    }
-
     func setCollection(_ name: String?, for id: WishlistItem.ID) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)

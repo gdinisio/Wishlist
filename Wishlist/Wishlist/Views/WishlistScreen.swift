@@ -24,8 +24,6 @@ struct WishlistScreen: View {
     @State private var addExit: AddItemExit = .none
     @State private var askingAbout: WishlistItem?
     @State private var isAskingGenerally = false
-    @State private var selection = Set<WishlistItem.ID>()
-    @State private var editMode: EditMode = .inactive
     @State private var selectedCollection: String?
     @State private var onlyWithinBudget = false
 
@@ -45,48 +43,46 @@ struct WishlistScreen: View {
                 )
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        if !visibleItems.isEmpty {
-                            EditButton()
-                        }
-                    }
-
-                    if editMode.isEditing {
-                        ToolbarItemGroup(placement: .bottomBar) {
-                            Button {
-                                repository.setPinned(true, forIDs: selection)
-                                editMode = .inactive
-                            } label: {
-                                Label(String(localized: "Pin"), systemImage: "pin")
-                            }
-                            .disabled(selection.isEmpty)
-
-                            Spacer()
-
+                        if hasFilters {
                             Menu {
-                                Button(String(localized: "None")) {
-                                    repository.setCollection(nil, forIDs: selection)
-                                    editMode = .inactive
+                                if !repository.collectionNames.isEmpty {
+                                    Picker(selection: $selectedCollection) {
+                                        Text("All Collections").tag(String?.none)
+                                        ForEach(repository.collectionNames, id: \.self) { name in
+                                            Text(name).tag(String?.some(name))
+                                        }
+                                    } label: {
+                                        Text("Collection")
+                                    }
+                                    .pickerStyle(.inline)
                                 }
-                                ForEach(repository.collectionNames, id: \.self) { name in
-                                    Button(name) {
-                                        repository.setCollection(name, forIDs: selection)
-                                        editMode = .inactive
+
+                                if settings.availableToSpend != nil {
+                                    Section {
+                                        Toggle(isOn: $onlyWithinBudget) {
+                                            Label(String(localized: "Within Budget"), systemImage: "creditcard")
+                                        }
+                                    }
+                                }
+
+                                if isNarrowed {
+                                    Section {
+                                        Button {
+                                            selectedCollection = nil
+                                            onlyWithinBudget = false
+                                        } label: {
+                                            Label(String(localized: "Clear Filters"), systemImage: "xmark.circle")
+                                        }
                                     }
                                 }
                             } label: {
-                                Label(String(localized: "Collection"), systemImage: "folder")
+                                Label(
+                                    String(localized: "Filter"),
+                                    systemImage: isNarrowed
+                                        ? "line.3.horizontal.decrease.circle.fill"
+                                        : "line.3.horizontal.decrease.circle"
+                                )
                             }
-                            .disabled(selection.isEmpty)
-
-                            Spacer()
-
-                            Button(role: .destructive) {
-                                repository.delete(ids: Array(selection))
-                                editMode = .inactive
-                            } label: {
-                                Label(String(localized: "Delete"), systemImage: "trash")
-                            }
-                            .disabled(selection.isEmpty)
                         }
                     }
 
@@ -101,28 +97,6 @@ struct WishlistScreen: View {
                             }
                             .pickerStyle(.inline)
 
-                            if !repository.collectionNames.isEmpty {
-                                Section {
-                                    Picker(selection: $selectedCollection) {
-                                        Text("All Collections").tag(String?.none)
-                                        ForEach(repository.collectionNames, id: \.self) { name in
-                                            Text(name).tag(String?.some(name))
-                                        }
-                                    } label: {
-                                        Text("Collection")
-                                    }
-                                    .pickerStyle(.inline)
-                                }
-                            }
-
-                            if settings.availableToSpend != nil {
-                                Section {
-                                    Toggle(isOn: $onlyWithinBudget) {
-                                        Label(String(localized: "Within Budget"), systemImage: "creditcard")
-                                    }
-                                }
-                            }
-
                             Section {
                                 Button {
                                     Task { await refreshPrices() }
@@ -132,17 +106,7 @@ struct WishlistScreen: View {
                                 .disabled(repository.isRefreshing || repository.activeItems.isEmpty)
                             }
                         } label: {
-                            // The control keeps its place; only its symbol
-                            // changes, so an active filter is visible without
-                            // adding a second button to the bar.
-                            Label(
-                                isNarrowed
-                                    ? String(localized: "Filters On")
-                                    : String(localized: "More"),
-                                systemImage: isNarrowed
-                                    ? "line.3.horizontal.decrease.circle.fill"
-                                    : "ellipsis.circle"
-                            )
+                            Label(String(localized: "More"), systemImage: "ellipsis.circle")
                         }
 
                         Button {
@@ -243,7 +207,7 @@ struct WishlistScreen: View {
     }
 
     private var list: some View {
-        List(selection: $selection) {
+        List {
             if !pinnedItems.isEmpty {
                 Section {
                     ForEach(pinnedItems) { item in
@@ -272,12 +236,6 @@ struct WishlistScreen: View {
             }
         }
         .listStyle(.plain)
-        .environment(\.editMode, $editMode)
-        .onChange(of: editMode) { _, mode in
-            // A selection that outlives edit mode would act on rows the user
-            // can no longer see they picked.
-            if !mode.isEditing { selection.removeAll() }
-        }
     }
 
     /// Shared by the pinned and unpinned sections, so the two can never drift
@@ -372,6 +330,12 @@ struct WishlistScreen: View {
     }
 
     private var isNarrowed: Bool { currentFilter.isNarrowed }
+
+    /// Whether there is anything to filter by yet. With no collections and no
+    /// budget set, the control would open onto an empty menu.
+    private var hasFilters: Bool {
+        !repository.collectionNames.isEmpty || settings.availableToSpend != nil
+    }
 
     private var visibleItems: [WishlistItem] {
         repository.activeItems(

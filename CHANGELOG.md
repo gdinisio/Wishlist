@@ -21,6 +21,22 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 6.2 — Fix: items open again
+
+**6.1 broke tapping an item.** Adding a selection binding to the list made
+SwiftUI treat every row as selectable rather than navigating: the row's
+navigation value and the list's selection value are both the item's `UUID`, so
+a tap resolved to selection and the push never happened.
+
+Multi-select is removed. `NavigationLink(value:)` inside a `NavigationStack`
+and a `List` selection binding are two ways of answering the same tap, and
+opening an item matters more than selecting several.
+
+The leading toolbar slot now holds a **Filter** menu instead — collection and
+budget, moved out of the overflow so filtering has its own control and its own
+visible on-state. Sort and Refresh stay in the overflow. The button only
+appears once there is something to filter by.
+
 ## 6.1 — Edit mode, assistant on items, composer alignment
 
 - **The wishlist's leading toolbar slot now holds Edit**, which is where iOS
