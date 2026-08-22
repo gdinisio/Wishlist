@@ -21,6 +21,28 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 6.0 — Pinning
+
+Pin the things you want most, or want soonest. Pinned items get their own
+section at the top of the wishlist, the way Notes does it — no badge or glyph
+on the row itself, because being in the Pinned section already says it.
+
+- Pin from a swipe or the context menu.
+- Marking something obtained unpins it: a pin means "wanted soon", and once it
+  has arrived that question is settled.
+- Pinning is only offered on active items, since it means nothing in history.
+
+### A migration fix worth knowing about
+
+`isPinned` is the first non-optional field added since the app shipped, and the
+synthesised decoder **fails outright** on a missing key for one — so every
+wishlist saved by an earlier build would have become unreadable, and been filed
+away as corrupt.
+
+`WishlistItem` now decodes field by field with a default for everything. The
+model has gained six fields in a week; tolerating what an older file does not
+yet contain is worth having permanently rather than as a one-off patch.
+
 ## 5.4 — Tables, a prominent send button, assistant in the toolbar
 
 - **Markdown tables render as tables.** `AttributedString` has no way to

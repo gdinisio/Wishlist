@@ -48,6 +48,19 @@ struct ItemActionsMenu: View {
                 }
             }
 
+            if !item.isObtained {
+                Button {
+                    repository.setPinned(!item.isPinned, for: item.id)
+                } label: {
+                    Label(
+                        item.isPinned
+                            ? String(localized: "Unpin")
+                            : String(localized: "Pin to Top"),
+                        systemImage: item.isPinned ? "pin.slash" : "pin"
+                    )
+                }
+            }
+
             if let onAsk {
                 Button {
                     onAsk()

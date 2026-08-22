@@ -109,6 +109,13 @@ final class WishlistRepository {
         return seen.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
+    func setPinned(_ isPinned: Bool, for id: WishlistItem.ID) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].isPinned = isPinned
+        items[index].touch()
+        scheduleSave()
+    }
+
     func setCollection(_ name: String?, for id: WishlistItem.ID) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)

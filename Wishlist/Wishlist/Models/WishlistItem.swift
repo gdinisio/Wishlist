@@ -34,6 +34,8 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     var dateAdded: Date
     var dateObtained: Date?
     var status: ItemStatus
+    /// Wanted most, or wanted soonest. Pinned items sit above the rest.
+    var isPinned: Bool
     var notes: String?
 
     /// Every price Wishlist has actually observed, oldest first.
@@ -65,6 +67,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         dateAdded: Date = .now,
         dateObtained: Date? = nil,
         status: ItemStatus = .active,
+        isPinned: Bool = false,
         notes: String? = nil,
         priceHistory: [PricePoint] = [],
         dateRefreshed: Date? = nil,
@@ -88,11 +91,46 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         self.dateAdded = dateAdded
         self.dateObtained = dateObtained
         self.status = status
+        self.isPinned = isPinned
         self.notes = notes
         self.priceHistory = priceHistory
         self.dateRefreshed = dateRefreshed
         self.sources = sources
         self.dateModified = dateModified
+    }
+
+    /// Decoded field by field, every value optional with a sensible default.
+    ///
+    /// The synthesised decoder fails outright on a missing key for a
+    /// non-optional property, so adding one plain `Bool` would have made every
+    /// wishlist saved by an earlier build unreadable. This model has gained
+    /// five fields in a week; being tolerant of what an older file does not yet
+    /// contain is a property worth having permanently, not a one-off patch.
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
+        fullName = try container.decodeIfPresent(String.self, forKey: .fullName)
+        imageURL = try container.decodeIfPresent(URL.self, forKey: .imageURL)
+        productURL = try container.decodeIfPresent(URL.self, forKey: .productURL)
+        price = try container.decodeIfPresent(Money.self, forKey: .price)
+        retailer = try container.decodeIfPresent(Retailer.self, forKey: .retailer)
+        availability = try container.decodeIfPresent(Availability.self, forKey: .availability) ?? .unknown
+        brand = try container.decodeIfPresent(String.self, forKey: .brand)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        colour = try container.decodeIfPresent(String.self, forKey: .colour)
+        size = try container.decodeIfPresent(String.self, forKey: .size)
+        collectionName = try container.decodeIfPresent(String.self, forKey: .collectionName)
+        details = try container.decodeIfPresent(String.self, forKey: .details)
+        dateAdded = try container.decodeIfPresent(Date.self, forKey: .dateAdded) ?? .now
+        dateObtained = try container.decodeIfPresent(Date.self, forKey: .dateObtained)
+        status = try container.decodeIfPresent(ItemStatus.self, forKey: .status) ?? .active
+        isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        priceHistory = try container.decodeIfPresent([PricePoint].self, forKey: .priceHistory) ?? []
+        dateRefreshed = try container.decodeIfPresent(Date.self, forKey: .dateRefreshed)
+        sources = try container.decodeIfPresent([String].self, forKey: .sources) ?? []
+        dateModified = try container.decodeIfPresent(Date.self, forKey: .dateModified) ?? .now
     }
 
     // `description` is spelled `details` in Swift to avoid colliding with
@@ -101,7 +139,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         case id, name, fullName, imageURL, productURL, price, retailer, availability
         case brand, category, colour, size, collectionName
         case details = "description"
-        case dateAdded, dateObtained, status, notes
+        case dateAdded, dateObtained, status, isPinned, notes
         case priceHistory, dateRefreshed, sources, dateModified
     }
 }
@@ -212,6 +250,8 @@ nonisolated extension WishlistItem {
     mutating func markObtained(on date: Date = .now) {
         status = .obtained
         dateObtained = date
+        // A pin means "wanted soon". Once it is here, that question is settled.
+        isPinned = false
         touch(date)
     }
 

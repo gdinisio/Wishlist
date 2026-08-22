@@ -196,41 +196,22 @@ struct WishlistScreen: View {
 
     private var list: some View {
         List {
-            Section {
-                ForEach(visibleItems) { item in
-                    NavigationLink(value: item.id) {
-                        ItemRow(item: item)
+            if !pinnedItems.isEmpty {
+                Section {
+                    ForEach(pinnedItems) { item in
+                        row(for: item)
                     }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            repository.markObtained(id: item.id)
-                        } label: {
-                            Label(String(localized: "Obtained"), systemImage: "checkmark.circle.fill")
-                        }
-                        .tint(.green)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            requestDeletion(of: item)
-                        } label: {
-                            Label(String(localized: "Delete"), systemImage: "trash")
-                        }
+                } header: {
+                    Label(String(localized: "Pinned"), systemImage: "pin.fill")
+                        .textCase(nil)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
-                        Button {
-                            editingItem = item
-                        } label: {
-                            Label(String(localized: "Edit"), systemImage: "pencil")
-                        }
-                        .tint(.indigo)
-                    }
-                    .contextMenu {
-                        ItemActionsMenu(
-                            item: item,
-                            onEdit: { editingItem = item },
-                            onDelete: { requestDeletion(of: item) },
-                            onAsk: { askingAbout = item }
-                        )
-                    }
+            Section {
+                ForEach(unpinnedItems) { item in
+                    row(for: item)
                 }
             } header: {
                 if searchText.isEmpty, let summary = listSummary {
@@ -243,6 +224,54 @@ struct WishlistScreen: View {
             }
         }
         .listStyle(.plain)
+    }
+
+    /// Shared by the pinned and unpinned sections, so the two can never drift
+    /// apart in what a row offers.
+    private func row(for item: WishlistItem) -> some View {
+        NavigationLink(value: item.id) {
+            ItemRow(item: item)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                repository.markObtained(id: item.id)
+            } label: {
+                Label(String(localized: "Obtained"), systemImage: "checkmark.circle.fill")
+            }
+            .tint(.green)
+
+            Button {
+                repository.setPinned(!item.isPinned, for: item.id)
+            } label: {
+                Label(
+                    item.isPinned ? String(localized: "Unpin") : String(localized: "Pin"),
+                    systemImage: item.isPinned ? "pin.slash.fill" : "pin.fill"
+                )
+            }
+            .tint(.orange)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                requestDeletion(of: item)
+            } label: {
+                Label(String(localized: "Delete"), systemImage: "trash")
+            }
+
+            Button {
+                editingItem = item
+            } label: {
+                Label(String(localized: "Edit"), systemImage: "pencil")
+            }
+            .tint(.indigo)
+        }
+        .contextMenu {
+            ItemActionsMenu(
+                item: item,
+                onEdit: { editingItem = item },
+                onDelete: { requestDeletion(of: item) },
+                onAsk: { askingAbout = item }
+            )
+        }
     }
 
     @ViewBuilder
@@ -307,6 +336,10 @@ struct WishlistScreen: View {
         }
         return String(localized: "Nothing on your wishlist fits your budget right now.")
     }
+
+    private var pinnedItems: [WishlistItem] { visibleItems.filter(\.isPinned) }
+
+    private var unpinnedItems: [WishlistItem] { visibleItems.filter { !$0.isPinned } }
 
     private func refreshPrices() async {
         await repository.refreshPrices()

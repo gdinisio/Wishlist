@@ -184,6 +184,11 @@ what it is rather than as a missing product.
 
 ## Organising and budgeting
 
+**Pinning** floats the things you want most, or soonest, into their own section
+at the top — pin from a swipe or the context menu. Marking something obtained
+unpins it automatically, since the question a pin asks has been answered.
+
+
 **Collections** are optional groupings you assign per item — a room, a person,
 an occasion. They are derived from the items rather than stored separately, so
 a collection exists exactly as long as something is in it. Filter by one from
