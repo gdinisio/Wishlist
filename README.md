@@ -1,6 +1,6 @@
 # Wishlist
 
-**Version 1.0** — see [CHANGELOG.md](CHANGELOG.md).
+**Version 7.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 A native iOS app for saving things you want to buy. Paste a link, Wishlist finds
 the name, price, picture and availability, and keeps it until you get it.
@@ -121,6 +121,7 @@ network and the store can be replaced or stubbed without touching a view.
 ```
 Views (SwiftUI)
   └─ WishlistRepository        app state + wishlist rules  (@Observable, main actor)
+       ├─ WishlistArchive      items + the named wishlists they belong to
        ├─ WishlistPersisting   protocol → FileWishlistStore | InMemoryWishlistStore
        └─ ProductLookupService the API chain
             ├─ URLValidator          validate, de-track, canonicalise, extract ASIN
@@ -140,7 +141,7 @@ Views (SwiftUI)
 | `Models/` | The normalised domain model. Prices are `Decimal`, dates are `Date`, status is an enum — nothing is stored as a string that isn't one. |
 | `Networking/` | `HTTPClient` protocol and the one place HTTP status codes become `LookupError`. |
 | `Enrichment/` | The lookup pipeline: validation, retailer identification, providers, parsing, merging. |
-| `Persistence/` | `WishlistPersisting` protocol, atomic JSON file store, and the repository. |
+| `Persistence/` | `WishlistPersisting` protocol, atomic JSON file store, and the repository. It reads and writes a `WishlistArchive` — items plus the named wishlists — and decodes tolerantly so an older archive still opens. |
 | `Images/` | Download coalescing, disk cache with an LRU budget, ImageIO downsampling. |
 | `Intelligence/` | The optional model layer: two clients behind one protocol, the extractor, the title/category polisher, and the verification that gates all of it. |
 | `Settings/` | Keychain wrapper, observable settings, and the settings UI. |
@@ -157,8 +158,8 @@ Views (SwiftUI)
 
 ### Ready for iCloud
 
-`WishlistPersisting` is a two-method protocol, and every item carries
-`dateModified` for last-writer-wins merging. Adding sync means writing a second
+`WishlistPersisting` is a two-method protocol over a single `WishlistArchive`,
+and every item carries `dateModified` for last-writer-wins merging. Adding sync means writing a second
 conformance and injecting it in `AppEnvironment` — no model migration and no
 changes to any view.
 
@@ -189,11 +190,15 @@ at the top — pin from a swipe or the context menu. Marking something obtained
 unpins it automatically, since the question a pin asks has been answered.
 
 
-**Collections** are optional groupings you assign per item — a room, a person,
-an occasion. They are derived from the items rather than stored separately, so
-a collection exists exactly as long as something is in it. Filter by one from
-the wishlist's menu; the toolbar symbol fills while a filter is narrowing the
-list.
+**Wishlists** are lists you create and name — "Tech", "Back to School", a room,
+a person, an occasion. Each has a name and an SF Symbol, and exists whether or
+not anything is on it yet. Switch between them from the leading toolbar item;
+the navigation title is always the list you are looking at, and new items join
+it. Move an item from its context menu, its editor or its detail screen.
+
+Deleting a wishlist keeps its items — they stop belonging to a list rather than
+disappearing. Collections from earlier versions are migrated into real
+wishlists once, on first load.
 
 **Available to spend** is an amount you set in Settings. The wishlist then shows
 what is left, offers a "Within Budget" filter, and each item says whether it

@@ -10,8 +10,8 @@
 import Foundation
 
 nonisolated protocol WishlistPersisting: Sendable {
-    func load() async throws -> [WishlistItem]
-    func save(_ items: [WishlistItem]) async throws
+    func load() async throws -> WishlistArchive
+    func save(_ archive: WishlistArchive) async throws
 }
 
 /// Versioned envelope written to disk. Storing a schema version now means a
@@ -22,12 +22,28 @@ nonisolated struct WishlistArchive: Codable, Sendable {
 
     var version: Int
     var items: [WishlistItem]
+    var wishlists: [Wishlist]
     var savedAt: Date
 
-    init(items: [WishlistItem], savedAt: Date = .now) {
+    init(items: [WishlistItem], wishlists: [Wishlist] = [], savedAt: Date = .now) {
         self.version = Self.currentVersion
         self.items = items
+        self.wishlists = wishlists
         self.savedAt = savedAt
+    }
+
+    /// Tolerant like the item decoder: an archive written before wishlists
+    /// existed simply has none.
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? Self.currentVersion
+        items = try container.decodeIfPresent([WishlistItem].self, forKey: .items) ?? []
+        wishlists = try container.decodeIfPresent([Wishlist].self, forKey: .wishlists) ?? []
+        savedAt = try container.decodeIfPresent(Date.self, forKey: .savedAt) ?? .now
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case version, items, wishlists, savedAt
     }
 }
 

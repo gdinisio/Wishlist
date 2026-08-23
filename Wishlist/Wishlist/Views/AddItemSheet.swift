@@ -26,6 +26,9 @@ nonisolated enum AddItemExit: Equatable {
 
 struct AddItemSheet: View {
     @Binding var exit: AddItemExit
+    /// The list currently on screen. Something added while looking at "Tech"
+    /// belongs on it without being asked.
+    var wishlistID: UUID?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.productLookup) private var lookup
@@ -259,6 +262,7 @@ struct AddItemSheet: View {
     private var manualDraft: WishlistItem {
         var item = WishlistItem(name: isLink ? "" : queryText.trimmingCharacters(in: .whitespacesAndNewlines))
         applyDetails(to: &item)
+        item.wishlistID = wishlistID
         if let link = try? URLValidator.validate(queryText) {
             item.productURL = link.canonicalURL
             item.retailer = link.retailer
@@ -273,6 +277,7 @@ struct AddItemSheet: View {
         let size = sizeText.trimmingCharacters(in: .whitespacesAndNewlines)
         item.colour = colour.isEmpty ? nil : colour
         item.size = size.isEmpty ? nil : size
+        item.wishlistID = wishlistID
     }
 
     private func resetResult() {
@@ -498,6 +503,6 @@ nonisolated enum AddRoute: Hashable {
 }
 
 #Preview {
-    AddItemSheet(exit: .constant(.none))
+    AddItemSheet(exit: .constant(.none), wishlistID: nil)
         .withPreviewEnvironment()
 }

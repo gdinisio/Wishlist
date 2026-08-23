@@ -24,11 +24,11 @@ struct ItemActionsMenu: View {
     @Environment(\.openURL) private var openURL
 
     /// Writes straight through to the store, so the menu shows the current
-    /// membership with a checkmark and changing it is one tap.
-    private var collectionBinding: Binding<String?> {
+    /// list with a checkmark and changing it is one tap.
+    private var wishlistBinding: Binding<UUID?> {
         Binding(
-            get: { item.collectionName },
-            set: { repository.setCollection($0, for: item.id) }
+            get: { item.wishlistID },
+            set: { repository.setWishlist($0, for: item.id) }
         )
     }
 
@@ -38,7 +38,7 @@ struct ItemActionsMenu: View {
                 Button {
                     repository.returnToWishlist(id: item.id)
                 } label: {
-                    Label(String(localized: "Move to Wishlist"), systemImage: "arrow.uturn.backward")
+                    Label(String(localized: "Mark as Not Obtained"), systemImage: "arrow.uturn.backward")
                 }
             } else {
                 Button {
@@ -75,21 +75,22 @@ struct ItemActionsMenu: View {
                 Label(String(localized: "Edit Details"), systemImage: "pencil")
             }
 
-            // Only once collections exist — the editor is where the first one
-            // gets made, and an empty submenu would be a dead end.
-            if !repository.collectionNames.isEmpty {
+            // Only once lists exist — they are made from the wishlist screen,
+            // and an empty submenu would be a dead end.
+            if !repository.wishlists.isEmpty {
                 Menu {
-                    Picker(selection: collectionBinding) {
-                        Text("None").tag(String?.none)
-                        ForEach(repository.collectionNames, id: \.self) { name in
-                            Text(name).tag(String?.some(name))
+                    Picker(selection: wishlistBinding) {
+                        Text("None").tag(UUID?.none)
+                        ForEach(repository.sortedWishlists) { list in
+                            Label(list.displayName, systemImage: list.symbolName)
+                                .tag(UUID?.some(list.id))
                         }
                     } label: {
-                        Text("Collection")
+                        Text("Wishlist")
                     }
                     .pickerStyle(.inline)
                 } label: {
-                    Label(String(localized: "Collection"), systemImage: "folder")
+                    Label(String(localized: "Wishlist"), systemImage: "list.bullet")
                 }
             }
 

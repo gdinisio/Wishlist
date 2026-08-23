@@ -48,8 +48,8 @@ struct ItemEditorSheet: View {
     @State private var priceText: String
     @State private var currencyCode: String
     @State private var urlText: String
-    @State private var isNamingCollection = false
-    @State private var newCollectionName = ""
+    @State private var isNamingWishlist = false
+    @State private var newWishlistName = ""
     @State private var isConfirmingDiscard = false
     @FocusState private var isPriceFocused: Bool
 
@@ -129,25 +129,24 @@ struct ItemEditorSheet: View {
                 }
 
                 Section {
-                    Picker(selection: $draft.collectionName) {
-                        Text("None").tag(String?.none)
-                        ForEach(collectionOptions, id: \.self) { name in
-                            Text(name).tag(String?.some(name))
+                    Picker(selection: $draft.wishlistID) {
+                        Text("None").tag(UUID?.none)
+                        ForEach(repository.sortedWishlists) { list in
+                            Label(list.displayName, systemImage: list.symbolName)
+                                .tag(UUID?.some(list.id))
                         }
                     } label: {
-                        Text("Collection")
+                        Text("Wishlist")
                     }
 
                     Button {
-                        newCollectionName = ""
-                        isNamingCollection = true
+                        newWishlistName = ""
+                        isNamingWishlist = true
                     } label: {
-                        Label(String(localized: "New Collection…"), systemImage: "folder.badge.plus")
+                        Label(String(localized: "New Wishlist…"), systemImage: "plus")
                     }
-                } header: {
-                    Text("Collection")
                 } footer: {
-                    Text("Optional. Group related things — a room, a person, an occasion.")
+                    Text("Optional. Group related things — Tech, Back to School, a room, a person.")
                 }
 
                 Section {
@@ -173,12 +172,13 @@ struct ItemEditorSheet: View {
                     Text("Notes")
                 }
             }
-            .alert(String(localized: "New Collection"), isPresented: $isNamingCollection) {
-                TextField(String(localized: "Name"), text: $newCollectionName)
+            .alert(String(localized: "New Wishlist"), isPresented: $isNamingWishlist) {
+                TextField(String(localized: "Name"), text: $newWishlistName)
                     .textInputAutocapitalization(.words)
                 Button(String(localized: "Create")) {
-                    let trimmed = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty { draft.collectionName = trimmed }
+                    if let created = repository.addWishlist(name: newWishlistName) {
+                        draft.wishlistID = created.id
+                    }
                 }
                 Button(String(localized: "Cancel"), role: .cancel) {}
             }
@@ -262,17 +262,6 @@ struct ItemEditorSheet: View {
                 }
             }
         )
-    }
-
-    /// Existing collections, plus whatever this item is already in, so a value
-    /// created a moment ago is selectable before anything has been saved.
-    private var collectionOptions: [String] {
-        var names = Set(repository.collectionNames)
-        if let current = draft.collectionName?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !current.isEmpty {
-            names.insert(current)
-        }
-        return names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     private var currencyOptions: [String] {

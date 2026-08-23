@@ -24,7 +24,10 @@ struct WishlistScreen: View {
     @State private var addExit: AddItemExit = .none
     @State private var askingAbout: WishlistItem?
     @State private var isAskingGenerally = false
-    @State private var selectedCollection: String?
+    @State private var selectedWishlistID: UUID?
+    @State private var isNamingWishlist = false
+    @State private var newWishlistName = ""
+    @State private var isManagingWishlists = false
     @State private var onlyWithinBudget = false
 
     var body: some View {
@@ -32,7 +35,7 @@ struct WishlistScreen: View {
 
         NavigationStack(path: $path) {
             content
-                .navigationTitle(Text("Wishlist"))
+                .navigationTitle(Text(activeWishlistName))
                 .navigationDestination(for: WishlistItem.ID.self) { id in
                     ItemDetailScreen(itemID: id)
                 }
@@ -43,46 +46,42 @@ struct WishlistScreen: View {
                 )
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        if hasFilters {
-                            Menu {
-                                if !repository.collectionNames.isEmpty {
-                                    Picker(selection: $selectedCollection) {
-                                        Text("All Collections").tag(String?.none)
-                                        ForEach(repository.collectionNames, id: \.self) { name in
-                                            Text(name).tag(String?.some(name))
-                                        }
-                                    } label: {
-                                        Text("Collection")
-                                    }
-                                    .pickerStyle(.inline)
-                                }
-
-                                if settings.availableToSpend != nil {
-                                    Section {
-                                        Toggle(isOn: $onlyWithinBudget) {
-                                            Label(String(localized: "Within Budget"), systemImage: "creditcard")
-                                        }
-                                    }
-                                }
-
-                                if isNarrowed {
-                                    Section {
-                                        Button {
-                                            selectedCollection = nil
-                                            onlyWithinBudget = false
-                                        } label: {
-                                            Label(String(localized: "Clear Filters"), systemImage: "xmark.circle")
-                                        }
-                                    }
+                        Menu {
+                            Picker(selection: $selectedWishlistID) {
+                                Label(String(localized: "All Items"), systemImage: "tray.full")
+                                    .tag(UUID?.none)
+                                ForEach(repository.sortedWishlists) { list in
+                                    Label(list.displayName, systemImage: list.symbolName)
+                                        .tag(UUID?.some(list.id))
                                 }
                             } label: {
-                                Label(
-                                    String(localized: "Filter"),
-                                    systemImage: isNarrowed
-                                        ? "line.3.horizontal.decrease.circle.fill"
-                                        : "line.3.horizontal.decrease.circle"
-                                )
+                                Text("Wishlist")
                             }
+                            .pickerStyle(.inline)
+
+                            Section {
+                                if settings.availableToSpend != nil {
+                                    Toggle(isOn: $onlyWithinBudget) {
+                                        Label(String(localized: "Within Budget"), systemImage: "creditcard")
+                                    }
+                                }
+                                Button {
+                                    newWishlistName = ""
+                                    isNamingWishlist = true
+                                } label: {
+                                    Label(String(localized: "New Wishlist"), systemImage: "plus")
+                                }
+                                Button {
+                                    isManagingWishlists = true
+                                } label: {
+                                    Label(String(localized: "Edit Wishlists"), systemImage: "slider.horizontal.3")
+                                }
+                            }
+                        } label: {
+                            Label(
+                                String(localized: "Wishlists"),
+                                systemImage: isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
+                            )
                         }
                     }
 
@@ -126,7 +125,7 @@ struct WishlistScreen: View {
                     await refreshPrices()
                 }
                 .sheet(isPresented: $isAddingItem) {
-                    AddItemSheet(exit: $addExit)
+                    AddItemSheet(exit: $addExit, wishlistID: selectedWishlistID)
                 }
                 .onChange(of: isAddingItem) { _, isPresented in
                     // Wait for the sheet to finish dismissing before pushing or
@@ -150,6 +149,32 @@ struct WishlistScreen: View {
                 }
                 .sheet(isPresented: $isAskingGenerally) {
                     AskAssistantSheet(item: nil)
+                }
+                .sheet(isPresented: $isManagingWishlists) {
+                    WishlistsManagerView()
+                }
+                .onChange(of: repository.wishlists) { _, lists in
+                    // A list can be deleted from the manager while it is the
+                    // one being shown. Fall back to All Items rather than
+                    // filtering by something that no longer exists.
+                    guard let selected = selectedWishlistID else { return }
+                    if !lists.contains(where: { $0.id == selected }) {
+                        selectedWishlistID = nil
+                    }
+                }
+                .alert(String(localized: "New Wishlist"), isPresented: $isNamingWishlist) {
+                    TextField(String(localized: "Name"), text: $newWishlistName)
+                        .textInputAutocapitalization(.words)
+                    Button(String(localized: "Create")) {
+                        // Switching to it immediately is what someone naming a
+                        // list is about to want.
+                        if let created = repository.addWishlist(name: newWishlistName) {
+                            selectedWishlistID = created.id
+                        }
+                    }
+                    Button(String(localized: "Cancel"), role: .cancel) {}
+                } message: {
+                    Text("Group things you want — Tech, Back to School, Kitchen.")
                 }
                 .confirmationDialog(
                     Text(deletionTitle),
@@ -290,6 +315,22 @@ struct WishlistScreen: View {
     private var emptyState: some View {
         if !searchText.isEmpty {
             ContentUnavailableView.search(text: searchText)
+        } else if let list = repository.wishlist(id: selectedWishlistID), !onlyWithinBudget {
+            // A list you just made is empty by definition. The useful thing to
+            // offer is adding to it, not undoing the "filter" you deliberately
+            // applied by opening it.
+            ContentUnavailableView {
+                Label(list.displayName, systemImage: list.symbolName)
+            } description: {
+                Text("Nothing on this list yet. Anything you add while you're here joins it.")
+            } actions: {
+                Button {
+                    isAddingItem = true
+                } label: {
+                    Label(String(localized: "Add Item"), systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+            }
         } else if isNarrowed {
             // A filter hiding everything must not read as an empty wishlist.
             ContentUnavailableView {
@@ -298,7 +339,7 @@ struct WishlistScreen: View {
                 Text(narrowedEmptyDescription)
             } actions: {
                 Button(String(localized: "Show All Items")) {
-                    selectedCollection = nil
+                    selectedWishlistID = nil
                     onlyWithinBudget = false
                 }
                 .buttonStyle(.borderedProminent)
@@ -324,18 +365,20 @@ struct WishlistScreen: View {
     private var currentFilter: WishlistFilter {
         WishlistFilter(
             searchText: searchText,
-            collection: selectedCollection,
+            wishlistID: selectedWishlistID,
             withinBudget: onlyWithinBudget
         )
     }
 
+    /// The screen is named after the list you are looking at.
+    private var activeWishlistName: String {
+        repository.wishlist(id: selectedWishlistID)?.displayName
+            ?? String(localized: "Wishlist")
+    }
+
     private var isNarrowed: Bool { currentFilter.isNarrowed }
 
-    /// Whether there is anything to filter by yet. With no collections and no
-    /// budget set, the control would open onto an empty menu.
-    private var hasFilters: Bool {
-        !repository.collectionNames.isEmpty || settings.availableToSpend != nil
-    }
+
 
     private var visibleItems: [WishlistItem] {
         repository.activeItems(
@@ -346,11 +389,12 @@ struct WishlistScreen: View {
     }
 
     private var narrowedEmptyDescription: String {
-        if let collection = selectedCollection, onlyWithinBudget {
-            return String(localized: "Nothing in “\(collection)” fits your budget.")
+        let name = repository.wishlist(id: selectedWishlistID)?.displayName
+        if let name, onlyWithinBudget {
+            return String(localized: "Nothing in “\(name)” fits your budget.")
         }
-        if let collection = selectedCollection {
-            return String(localized: "There’s nothing in “\(collection)” yet.")
+        if let name {
+            return String(localized: "There’s nothing in “\(name)” yet. Add something and it will appear here.")
         }
         return String(localized: "Nothing on your wishlist fits your budget right now.")
     }
@@ -373,7 +417,7 @@ struct WishlistScreen: View {
         guard !shown.isEmpty else { return nil }
 
         var parts: [String] = []
-        if let collection = selectedCollection { parts.append(collection) }
+
         parts.append(shown.count == 1
             ? String(localized: "1 item")
             : String(localized: "\(shown.count) items"))

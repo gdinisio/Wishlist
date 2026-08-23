@@ -18,6 +18,7 @@ final class WishlistRepository {
     // MARK: - State
 
     private(set) var items: [WishlistItem] = []
+    private(set) var wishlists: [Wishlist] = []
     private(set) var isLoading = true
     /// Set when the saved wishlist could not be read, so the UI can say so
     /// rather than silently showing an empty list.
@@ -56,10 +57,14 @@ final class WishlistRepository {
         isLoading = true
         loadFailed = false
         do {
-            items = try await store.load()
+            let archive = try await store.load()
+            items = archive.items
+            wishlists = archive.wishlists
+            migrateCollectionsIfNeeded()
         } catch {
             loadFailed = true
             items = []
+            wishlists = []
             log.error("Failed to load wishlist: \(error.localizedDescription, privacy: .public)")
         }
         isLoading = false
@@ -87,8 +92,8 @@ final class WishlistRepository {
         budget: Money? = nil
     ) -> [WishlistItem] {
         var result = Self.filter(activeItems, query: filter.searchText)
-        if let collection = filter.collection {
-            result = result.filter { $0.collectionName == collection }
+        if let wishlistID = filter.wishlistID {
+            result = result.filter { $0.wishlistID == wishlistID }
         }
         if filter.withinBudget, let budget {
             result = result.filter { $0.fits(within: budget) }
@@ -96,17 +101,77 @@ final class WishlistRepository {
         return Self.sort(result, by: order)
     }
 
-    /// Every collection in use, alphabetically. Derived rather than stored, so
-    /// a collection stops existing the moment nothing is in it.
-    var collectionNames: [String] {
-        var seen = Set<String>()
-        for item in items {
-            if let name = item.collectionName?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !name.isEmpty {
-                seen.insert(name)
+    /// Named lists, alphabetically. Stored rather than derived, so one can be
+    /// created and then filled — the order people actually work in.
+    var sortedWishlists: [Wishlist] {
+        wishlists.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+
+    func wishlist(id: UUID?) -> Wishlist? {
+        guard let id else { return nil }
+        return wishlists.first { $0.id == id }
+    }
+
+    /// How many active items are on a list, shown beside its name.
+    func activeCount(inWishlist id: UUID) -> Int {
+        items.filter { $0.status == .active && $0.wishlistID == id }.count
+    }
+
+    @discardableResult
+    func addWishlist(name: String, symbolName: String = Wishlist.defaultSymbol) -> Wishlist? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let list = Wishlist(name: trimmed, symbolName: symbolName)
+        wishlists.append(list)
+        scheduleSave()
+        return list
+    }
+
+    func updateWishlist(_ list: Wishlist) {
+        guard let index = wishlists.firstIndex(where: { $0.id == list.id }) else { return }
+        wishlists[index] = list
+        scheduleSave()
+    }
+
+    /// Deleting a list never deletes what is on it — those items simply stop
+    /// belonging to one. Losing a saved product because a list went away would
+    /// be a poor trade.
+    func deleteWishlist(id: UUID) {
+        wishlists.removeAll { $0.id == id }
+        for index in items.indices where items[index].wishlistID == id {
+            items[index].wishlistID = nil
+            items[index].touch()
+        }
+        scheduleSave()
+    }
+
+    /// Turns the free-text collections of earlier builds into real lists, once.
+    private func migrateCollectionsIfNeeded() {
+        let names = Set(
+            items.compactMap { item -> String? in
+                guard let name = item.collectionName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !name.isEmpty else { return nil }
+                return name
+            }
+        )
+        guard !names.isEmpty else { return }
+
+        for name in names.sorted() {
+            let existing = wishlists.first {
+                $0.displayName.caseInsensitiveCompare(name) == .orderedSame
+            }
+            let list = existing ?? Wishlist(name: name)
+            if existing == nil { wishlists.append(list) }
+
+            for index in items.indices {
+                let trimmed = items[index].collectionName?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard trimmed?.caseInsensitiveCompare(name) == .orderedSame else { continue }
+                items[index].wishlistID = list.id
+                items[index].collectionName = nil
             }
         }
-        return seen.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        scheduleSave()
     }
 
     func setPinned(_ isPinned: Bool, for id: WishlistItem.ID) {
@@ -116,10 +181,9 @@ final class WishlistRepository {
         scheduleSave()
     }
 
-    func setCollection(_ name: String?, for id: WishlistItem.ID) {
+    func setWishlist(_ wishlistID: UUID?, for id: WishlistItem.ID) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
-        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
-        items[index].collectionName = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        items[index].wishlistID = wishlistID
         items[index].touch()
         scheduleSave()
     }
@@ -426,7 +490,7 @@ final class WishlistRepository {
     /// Writes are coalesced: a burst of edits produces one disk write.
     private func scheduleSave() {
         saveTask?.cancel()
-        let snapshot = items
+        let snapshot = WishlistArchive(items: items, wishlists: wishlists)
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
@@ -437,10 +501,10 @@ final class WishlistRepository {
     /// Called when the app leaves the foreground, so nothing waits on a timer.
     func saveNow() async {
         saveTask?.cancel()
-        await write(items)
+        await write(WishlistArchive(items: items, wishlists: wishlists))
     }
 
-    private func write(_ snapshot: [WishlistItem]) async {
+    private func write(_ snapshot: WishlistArchive) async {
         do {
             try await store.save(snapshot)
         } catch {
@@ -498,12 +562,12 @@ nonisolated struct PriceDrop: Identifiable, Sendable {
 /// persisted: a filter is a way of looking, not a setting.
 nonisolated struct WishlistFilter: Equatable, Sendable {
     var searchText: String = ""
-    var collection: String?
+    var wishlistID: UUID?
     var withinBudget: Bool = false
 
     /// True when something other than search is narrowing the list, which is
     /// what the toolbar indicator reflects.
-    var isNarrowed: Bool { collection != nil || withinBudget }
+    var isNarrowed: Bool { wishlistID != nil || withinBudget }
 }
 
 nonisolated enum WishlistSortOrder: String, CaseIterable, Codable, Sendable, Identifiable {

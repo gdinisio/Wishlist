@@ -26,9 +26,10 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     /// from another, and what they need reminding of in a shop.
     var colour: String?
     var size: String?
-    /// Optional grouping the user assigns, e.g. "Kitchen" or "Gifts". Plain
-    /// text rather than a separate entity: a wishlist does not need a taxonomy,
-    /// and this keeps items self-contained for a future sync.
+    /// Which named wishlist this belongs to, if any.
+    var wishlistID: UUID?
+    /// The former free-text grouping. Retained only so an item saved before
+    /// wishlists existed can be migrated on first load, then cleared.
     var collectionName: String?
     var details: String?
     var dateAdded: Date
@@ -62,6 +63,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         category: String? = nil,
         colour: String? = nil,
         size: String? = nil,
+        wishlistID: UUID? = nil,
         collectionName: String? = nil,
         details: String? = nil,
         dateAdded: Date = .now,
@@ -86,6 +88,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         self.category = category
         self.colour = colour
         self.size = size
+        self.wishlistID = wishlistID
         self.collectionName = collectionName
         self.details = details
         self.dateAdded = dateAdded
@@ -120,6 +123,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
         category = try container.decodeIfPresent(String.self, forKey: .category)
         colour = try container.decodeIfPresent(String.self, forKey: .colour)
         size = try container.decodeIfPresent(String.self, forKey: .size)
+        wishlistID = try container.decodeIfPresent(UUID.self, forKey: .wishlistID)
         collectionName = try container.decodeIfPresent(String.self, forKey: .collectionName)
         details = try container.decodeIfPresent(String.self, forKey: .details)
         dateAdded = try container.decodeIfPresent(Date.self, forKey: .dateAdded) ?? .now
@@ -137,7 +141,7 @@ nonisolated struct WishlistItem: Identifiable, Hashable, Codable, Sendable {
     // `CustomStringConvertible`, but persists under its natural key.
     private enum CodingKeys: String, CodingKey {
         case id, name, fullName, imageURL, productURL, price, retailer, availability
-        case brand, category, colour, size, collectionName
+        case brand, category, colour, size, wishlistID, collectionName
         case details = "description"
         case dateAdded, dateObtained, status, isPinned, notes
         case priceHistory, dateRefreshed, sources, dateModified

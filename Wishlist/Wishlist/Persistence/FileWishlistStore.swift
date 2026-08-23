@@ -30,15 +30,14 @@ actor FileWishlistStore: WishlistPersisting {
         }
     }
 
-    func load() async throws -> [WishlistItem] {
+    func load() async throws -> WishlistArchive {
         guard FileManager.default.fileExists(atPath: fileURL.path(percentEncoded: false)) else {
-            return []
+            return WishlistArchive(items: [])
         }
         let data = try Data(contentsOf: fileURL)
-        guard !data.isEmpty else { return [] }
+        guard !data.isEmpty else { return WishlistArchive(items: []) }
         do {
-            let archive = try WishlistCoder.makeDecoder().decode(WishlistArchive.self, from: data)
-            return archive.items
+            return try WishlistCoder.makeDecoder().decode(WishlistArchive.self, from: data)
         } catch {
             // A corrupt file must never present as an empty wishlist: keep a
             // copy so nothing is lost, and surface the failure.
@@ -51,11 +50,11 @@ actor FileWishlistStore: WishlistPersisting {
         }
     }
 
-    func save(_ items: [WishlistItem]) async throws {
+    func save(_ archive: WishlistArchive) async throws {
         let directory = fileURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-        let data = try WishlistCoder.makeEncoder().encode(WishlistArchive(items: items))
+        let data = try WishlistCoder.makeEncoder().encode(archive)
         // `.atomic` writes to a temporary file and renames, so an interrupted
         // save can never leave a half-written wishlist behind.
         try data.write(to: fileURL, options: [.atomic])
@@ -64,13 +63,13 @@ actor FileWishlistStore: WishlistPersisting {
 
 /// Used by previews and tests. Same contract, no disk.
 actor InMemoryWishlistStore: WishlistPersisting {
-    private var items: [WishlistItem]
+    private var archive: WishlistArchive
 
-    init(items: [WishlistItem] = []) {
-        self.items = items
+    init(items: [WishlistItem] = [], wishlists: [Wishlist] = []) {
+        self.archive = WishlistArchive(items: items, wishlists: wishlists)
     }
 
-    func load() async throws -> [WishlistItem] { items }
+    func load() async throws -> WishlistArchive { archive }
 
-    func save(_ items: [WishlistItem]) async throws { self.items = items }
+    func save(_ archive: WishlistArchive) async throws { self.archive = archive }
 }

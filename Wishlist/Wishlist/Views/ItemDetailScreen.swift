@@ -241,8 +241,11 @@ struct ItemDetailScreen: View {
             if let variant = item.variantSummary {
                 LabeledContent(String(localized: "Variant"), value: variant)
             }
-            if let collection = item.collectionName, !collection.isEmpty {
-                LabeledContent(String(localized: "Collection"), value: collection)
+            if let list = repository.wishlist(id: item.wishlistID) {
+                LabeledContent(String(localized: "Wishlist")) {
+                    Label(list.displayName, systemImage: list.symbolName)
+                        .foregroundStyle(.secondary)
+                }
             }
             // Shown whenever the displayed name is a shortened form, so the
             // store's own wording is never hidden.

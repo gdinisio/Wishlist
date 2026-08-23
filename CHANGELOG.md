@@ -1,25 +1,54 @@
 # Changelog
 
-## 2.3 — Fix the Groq connection test, and say why things fail
+## 7.0 — Wishlists
 
-- **The connection test rejected working Groq keys.** It required the model to
-  reply with the exact string `"ready"`. Claude's tool calling enforces a schema
-  server-side so it always did; Groq's JSON mode guarantees *valid JSON* and
-  nothing about its contents, so a perfectly good `{"status":"Ready"}` was
-  reported as a failure. The test now checks what it was actually meant to
-  check — that a well-formed object came back at all.
-- **Failures now repeat the service's own explanation.** Model clients read the
-  error body instead of collapsing every non-2xx into a generic message, via a
-  new `HTTPClient.sendAllowingHTTPError` and a `LookupError.providerRejected`
-  case. A retired Groq model previously surfaced as "Product not found — this
-  product may have been removed", which is nonsense under an API key field. It
-  now says what Groq said.
-- The Groq settings footer notes that Groq retires model IDs periodically, since
-  a stale ID is the most likely reason a valid key appears not to work.
+Collections are replaced by **wishlists you create and name** — "Tech", "Back to
+School", "Kitchen". The difference is not cosmetic. A collection was *derived*
+from items that happened to name it, so a list could not exist until something
+was already in it; but people decide they want a Back to School list and *then*
+fill it. A wishlist is now a stored thing with a name, an SF Symbol and an
+identity of its own, and it can sit empty as long as you like.
 
-## 2.2 — App icon
+- **The list switcher is the leading toolbar item**, and the navigation title is
+  the wishlist you are in — so the screen always says where you are. It holds an
+  inline picker of every list with its active count, "All Items", the budget
+  filter, and the way in to creating or editing lists.
+- **Items are assigned by identity, not by matching text.** Renaming a list
+  keeps everything on it; two lists may share a name without merging.
+- **Deleting a list keeps its items.** They simply stop belonging to a list,
+  which is the recoverable outcome; deleting things a user did not ask to delete
+  is not.
+- **Move an item from its context menu, its editor, or its detail screen** —
+  each in the pattern iOS already uses for that surface.
+- New items join whichever list you are looking at, so filling a list is one
+  decision made once rather than once per item.
 
-- iOS 27 app icon (added directly in Xcode).
+### Clarity fixes found on the way
+
+- **Two different actions were both called "Move to Wishlist"** in the same
+  menu: returning an obtained item to the active list, and assigning it to a
+  named one. The first is now **Mark as Not Obtained**, which mirrors *Mark as
+  Obtained* directly; the second is a **Wishlist** submenu.
+- **An empty list is no longer reported as a failed filter.** Opening a list you
+  just made showed "Nothing Matches" and offered to show all items — undoing the
+  thing you deliberately did. It now names the list and offers to add to it.
+- **Deleting the list you are looking at falls back to All Items**, rather than
+  leaving the screen filtered by something that no longer exists.
+- Counts live in Edit Wishlists, where the rows have room for them, rather than
+  being spliced into menu titles. VoiceOver reads a row as "Tech, 3 items", and
+  symbol choices are read as words rather than "fork dot knife".
+
+### Migration
+
+Existing free-text collection names are turned into real wishlists once, on
+first load, and every item that named one is attached to it. `collectionName`
+survives on the model for that single pass and is then cleared. Nothing has to
+be re-filed by hand.
+
+The archive on disk now stores wishlists alongside items, so `WishlistPersisting`
+loads and saves a `WishlistArchive` rather than a bare array. It decodes
+tolerantly, as items already do — an archive written by 6.x still opens, and
+comes back with its collections migrated.
 
 ## 6.3 — Fix: the send button responds
 
@@ -259,6 +288,27 @@ reasonable, what to check before buying, what people complain about.
 - Opening it without a key configured offers setup **inline** — pushed within
   the sheet rather than throwing the user at another tab, so they come straight
   back to the question they had.
+
+## 2.3 — Fix the Groq connection test, and say why things fail
+
+- **The connection test rejected working Groq keys.** It required the model to
+  reply with the exact string `"ready"`. Claude's tool calling enforces a schema
+  server-side so it always did; Groq's JSON mode guarantees *valid JSON* and
+  nothing about its contents, so a perfectly good `{"status":"Ready"}` was
+  reported as a failure. The test now checks what it was actually meant to
+  check — that a well-formed object came back at all.
+- **Failures now repeat the service's own explanation.** Model clients read the
+  error body instead of collapsing every non-2xx into a generic message, via a
+  new `HTTPClient.sendAllowingHTTPError` and a `LookupError.providerRejected`
+  case. A retired Groq model previously surfaced as "Product not found — this
+  product may have been removed", which is nonsense under an API key field. It
+  now says what Groq said.
+- The Groq settings footer notes that Groq retires model IDs periodically, since
+  a stale ID is the most likely reason a valid key appears not to work.
+
+## 2.2 — App icon
+
+- iOS 27 app icon (added directly in Xcode).
 
 ## 2.2 — Groq models read from the provider
 
