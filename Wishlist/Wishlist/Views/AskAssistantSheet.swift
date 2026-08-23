@@ -177,6 +177,12 @@ struct AskAssistantSheet: View {
                             .regular.tint(canSend ? Color.accentColor : nil).interactive(),
                             in: Circle()
                         )
+                        // The glass draws a circle but does not make one
+                        // tappable, so without this only the arrow's own glyph
+                        // responded. 44pt is Apple's minimum target, and the
+                        // visible circle stays 36.
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSend)
@@ -210,7 +216,10 @@ struct AskAssistantSheet: View {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isSending else { return }
         guard let client = LanguageModelRouter(http: URLSessionHTTPClient())
-            .client(for: settings.intelligence) else { return }
+            .client(for: settings.intelligence) else {
+            failure = .noProviderConfigured
+            return
+        }
 
         draft = ""
         failure = nil

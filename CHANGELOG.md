@@ -21,6 +21,16 @@
 
 - iOS 27 app icon (added directly in Xcode).
 
+## 6.3 — Fix: the send button responds
+
+Only the arrow glyph itself was tappable. `.glassEffect` draws a circle but
+does not make one hit-testable, and the label had no `contentShape`, so the
+target was a thin 17pt arrow rather than the circle you can see.
+
+The tap target is now 44pt — Apple's stated minimum, which the 36pt circle was
+under regardless — while the visible circle stays 36. A tap that cannot work
+because no assistant is configured now says so instead of doing nothing.
+
 ## 6.2 — Fix: items open again
 
 **6.1 broke tapping an item.** Adding a selection binding to the list made
