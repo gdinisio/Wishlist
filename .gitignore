@@ -15,3 +15,11 @@ xcuserdata/
 # Swift Package Manager
 .swiftpm/
 .build/
+
+# Icon exports
+# The app's icon is Wishlist/Wishlist.icon — that is what the Xcode project
+# references and builds. Everything else under icon/ is a re-export of the same
+# artwork and comes back byte-identical on every edit. Only the editable
+# Pixelmator master is tracked.
+icon/*
+!icon/Wishlist.pxd

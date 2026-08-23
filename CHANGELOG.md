@@ -1,5 +1,38 @@
 # Changelog
 
+## 7.5 — Icon exports stay out of the repository
+
+Re-exporting the icon put five generated files back into `icon/` — the same
+duplicates 7.2 removed. Deleting them again would only have worked until the
+next edit, so the export folder is ignored instead of cleaned.
+
+`Wishlist/Wishlist.icon` is the icon: it is what the Xcode project references
+and builds. Everything else under `icon/` is a re-export of the same artwork
+from the design file, byte-identical to what is already tracked. Only
+`icon/Wishlist.pxd` is kept, because it is the editable master and cannot be
+regenerated from the exports.
+
+Also catches the version up: 7.4 changed the icon without bumping
+`MARKETING_VERSION` or writing a changelog entry, so Settings was reporting 7.3
+while the repository was on 7.4.
+
+## 7.4 — New app icon
+
+A clipboard with a shopping cart in front of it — the list and the buying, which
+is what the app is.
+
+Built as a layered Icon Composer document rather than a flat image, so it is
+lit and shaded by the system rather than pre-baked:
+
+- Two layers — the clipboard across the full canvas behind, the cart smaller and
+  offset in front — each filled by the icon renderer rather than carrying its
+  own colour, so a single artwork serves every appearance.
+- **Light, Dark and Tinted variants.** Indigo on light, a lighter indigo on
+  dark, and white for the tinted home screen iOS 26 offers. Without the tinted
+  specialisation an icon is flattened by the system rather than styled by it.
+- Translucency, specular highlights and a blur material on the rear layer, so
+  the two planes separate under Liquid Glass instead of reading as one sticker.
+
 ## 7.3 — The pinned boundary is visible
 
 The two groups ran together, so it was not obvious where pinning stopped.

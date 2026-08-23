@@ -1,6 +1,6 @@
 # Wishlist
 
-**Version 7.3** — see [CHANGELOG.md](CHANGELOG.md).
+**Version 7.5** — see [CHANGELOG.md](CHANGELOG.md).
 
 A native iOS app for saving things you want to buy. Paste a link, Wishlist finds
 the name, price, picture and availability, and keeps it until you get it.
