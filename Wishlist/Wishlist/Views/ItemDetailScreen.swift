@@ -197,6 +197,14 @@ struct ItemDetailScreen: View {
                 }
             }
 
+            // Nothing on this screen said an item was pinned — you had to open
+            // the menu and read whether it offered Pin or Unpin.
+            if item.isPinned {
+                Label(String(localized: "Pinned"), systemImage: "pin.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             if item.isObtained {
                 Label(
                     item.dateObtained.map { String(localized: "Obtained \(DateText.friendly($0))") }

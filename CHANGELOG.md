@@ -1,5 +1,24 @@
 # Changelog
 
+## 7.3 — The pinned boundary is visible
+
+The two groups ran together, so it was not obvious where pinning stopped.
+
+- **The unpinned group now has its own heading.** This is the fix, and it does
+  more than add a gap: section headers are *sticky* in a plain list, and with no
+  header below it the "Pinned" heading stayed stuck to the top of the screen for
+  the entire scroll — still claiming to label rows that were not pinned. Now
+  whichever heading is at the top of the screen always names what you are
+  looking at, at any scroll position.
+- **An item's own screen says when it is pinned.** Nothing there did before; you
+  had to open the menu and read whether it offered Pin or Unpin.
+
+A pin glyph on each pinned row was considered and left out. Pinned items are
+already in a section of their own, so every row in it would carry the same mark
+— it would separate nothing from its neighbours, and on the leading edge it
+would push the thumbnails out of line with the rest of the list. The sticky
+heading answers the same question and keeps answering it while you scroll.
+
 ## 7.2 — Repository cleanup
 
 No app code changed. Four kinds of clutter removed.

@@ -226,10 +226,7 @@ struct WishlistScreen: View {
                         row(for: item)
                     }
                 } header: {
-                    Label(String(localized: "Pinned"), systemImage: "pin.fill")
-                        .textCase(nil)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    sectionHeader(String(localized: "Pinned"), symbol: "pin.fill")
                 } footer: {
                     // Only when nothing follows, so the total is always last.
                     if unpinnedItems.isEmpty { summaryFooter }
@@ -241,12 +238,36 @@ struct WishlistScreen: View {
                     ForEach(unpinnedItems) { item in
                         row(for: item)
                     }
+                } header: {
+                    // Headers are sticky in a plain list. Without one here,
+                    // "Pinned" stayed stuck to the top of the screen for the
+                    // whole scroll — still claiming to label rows that were
+                    // nothing of the kind. This both separates the groups and
+                    // takes over the sticky slot at the boundary, so whatever
+                    // is at the top of the screen always names what you are
+                    // looking at.
+                    if !pinnedItems.isEmpty {
+                        sectionHeader(String(localized: "Everything Else"))
+                    }
                 } footer: {
                     summaryFooter
                 }
             }
         }
         .listStyle(.plain)
+    }
+
+    private func sectionHeader(_ title: String, symbol: String? = nil) -> some View {
+        Group {
+            if let symbol {
+                Label(title, systemImage: symbol)
+            } else {
+                Text(title)
+            }
+        }
+        .textCase(nil)
+        .font(.footnote)
+        .foregroundStyle(.secondary)
     }
 
     /// A count and a total summarise what you have just read, so they belong
