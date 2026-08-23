@@ -1,6 +1,6 @@
 # Wishlist
 
-**Version 7.1** — see [CHANGELOG.md](CHANGELOG.md).
+**Version 7.2** — see [CHANGELOG.md](CHANGELOG.md).
 
 A native iOS app for saving things you want to buy. Paste a link, Wishlist finds
 the name, price, picture and availability, and keeps it until you get it.
@@ -238,22 +238,26 @@ own — see below.
 
 None of these are required — the app builds and runs as it is.
 
-1. **App icon** — drop yours into `Assets.xcassets/AppIcon.appiconset`.
-2. **Share Extension** (recommended next step) — File → New → Target → Share
+1. **Share Extension** (recommended next step) — File → New → Target → Share
    Extension would let you add items straight from Safari's share sheet. It
    needs an App Group so the extension and app share the same store; the
    persistence layer is already behind a protocol, so only
    `FileWishlistStore`'s directory would change.
-3. **iCloud sync** — add the iCloud capability with CloudKit, then add a
+2. **iCloud sync** — add the iCloud capability with CloudKit, then add a
    `CloudKitWishlistStore: WishlistPersisting` alongside the file store.
-4. **Background price checks** — the price-drop alerts work from any refresh
+3. **Background price checks** — the price-drop alerts work from any refresh
    while the app is open. To have them run on their own, add the Background
    Modes capability with *Background fetch*, register a `BGAppRefreshTask`, and
    call `repository.refreshPrices()` from it. Everything else is already in
    place.
-5. **Deployment target** — the project is set to iOS 27. The code needs
-   **iOS 18 or later** (the `Tab` API in `TabView`); everything else is iOS 17.
-   Lowering it to 18.0 in the target's build settings is safe.
+4. **Deployment target** — the project is set to iOS 27, which is higher than
+   the code needs. The real floor is **iOS 26.0**, set by `.glassEffect` on the
+   assistant's composer and send button; below that the next constraint is the
+   `Tab` API in `TabView` at iOS 18, and everything else is iOS 17 or earlier.
+   Lowering the target to 26.0 costs nothing. Going below 26 does not degrade
+   gracefully — `.glassEffect` would fail to compile and would need an
+   `#available` guard first. Note that a device running iOS 26.x cannot be used
+   as a run destination while the target says 27.
 
 ## Requirements
 

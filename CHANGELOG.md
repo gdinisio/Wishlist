@@ -1,5 +1,34 @@
 # Changelog
 
+## 7.2 — Repository cleanup
+
+No app code changed. Four kinds of clutter removed.
+
+- **Four files were tracked despite being in `.gitignore`** — two `.DS_Store`,
+  and Xcode's per-user state (`UserInterfaceState.xcuserstate`, which stores
+  window positions, and `xcschememanagement.plist`). `.gitignore` never
+  untracks what was committed before it existed. These are exactly the files
+  that produce conflicts between two people working on the same project, so
+  they matter more now than they did.
+- **The icon was in the repository three times.** `icon/Wishlist.icon/` was
+  byte-identical to `Wishlist/Wishlist.icon/`, the one the project actually
+  references, and `icon/Layer 3.svg` and `icon/Layer 4.svg` were a third copy of
+  the same two assets. Only the Pixelmator master (`icon/Wishlist.pxd`) is
+  unique, and it is kept — it is the editable source and cannot be regenerated
+  from the exports.
+- **The changelog had two sections numbered 2.2** (two commits shipped under
+  that number) and an "Unreleased" section describing the assistant, which has
+  been released since before 1.1. The 2.2 sections are merged; the assistant
+  section now says when it landed instead of claiming it never did.
+- **The README's deployment-target advice was wrong.** It said lowering to iOS
+  18.0 "is safe". It has not been safe since `.glassEffect` landed — that is
+  iOS 26.0 and unguarded, so it would fail to compile rather than degrade.
+  README and `CLAUDE.md` now record 26.0 as the real floor, and note that an
+  iOS 26.x device cannot be a run destination while the target says 27. The
+  target itself is unchanged.
+- The README's "drop your app icon into `AppIcon.appiconset`" step is gone; the
+  icon exists, as an Icon Composer document the project already builds.
+
 ## 7.1 — Four refinements
 
 - **A delete confirmation is presented from the row it is about**, not from the
@@ -336,11 +365,7 @@ reasonable, what to check before buying, what people complain about.
 - The Groq settings footer notes that Groq retires model IDs periodically, since
   a stale ID is the most likely reason a valid key appears not to work.
 
-## 2.2 — App icon
-
-- iOS 27 app icon (added directly in Xcode).
-
-## 2.2 — Groq models read from the provider
+## 2.2 — Groq models read from the provider, app icon
 
 The shipped default Groq model, `llama-3.3-70b-versatile`, was deprecated by
 Groq on 17 June 2026 and stopped being served in August 2026, so every request
@@ -354,6 +379,7 @@ failed with "model not available" even with a perfectly good key.
   current one on launch instead of failing on first use.
 - The default moved to `openai/gpt-oss-120b`, one of Groq's own recommended
   replacements — but it is now a starting point rather than a promise.
+- iOS 27 app icon (added directly in Xcode).
 
 ## 2.1 — First build fixes
 
@@ -408,9 +434,7 @@ empty.
 - The Add sheet's name field is labelled "Name (Optional)" when a link is
   present, since that is exactly when it is optional.
 
-## Unreleased
-
-### Optional language-model assistant
+## Before 1.1 — Optional language-model assistant
 
 Off by default. Adds a third stage to the lookup chain for pages no parser can
 read, plus title tidying and category suggestions.

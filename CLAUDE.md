@@ -76,8 +76,10 @@ Claude Code web sessions run on Linux with no Xcode and no Swift toolchain, and
 tested**. Write conservatively, prefer well-established APIs over novel ones, and
 say plainly in the summary that the change is unverified.
 
-Minimum deployment target for the code as written is **iOS 18** (the `Tab` API);
-the project currently targets iOS 27.
+The project targets iOS 27. The code as written needs **iOS 26.0** —
+`.glassEffect` on the assistant's composer and send button — and below that the
+next constraint is `Tab` in `TabView` at iOS 18. Do not describe 18 as the floor
+while `.glassEffect` is unguarded: it would fail to compile, not degrade.
 
 ## Layout
 
