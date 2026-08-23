@@ -44,7 +44,11 @@ struct ItemRow: View {
                 .font(.body)
                 .fontWeight(.medium)
                 .lineLimit(2)
-                .foregroundStyle(.primary)
+                // Struck through once obtained — a second, non-colour channel
+                // saying the same thing as the date beside it, so the state is
+                // legible at a glance and without relying on colour.
+                .strikethrough(item.isObtained, color: Color.secondary)
+                .foregroundStyle(item.isObtained ? Color.secondary : Color.primary)
 
             HStack(spacing: 6) {
                 if let retailer = item.displayRetailer {
@@ -89,6 +93,8 @@ struct ItemRow: View {
                 .contentTransition(.numericText())
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
+                .strikethrough(item.isObtained, color: Color.secondary)
+                .foregroundStyle(item.isObtained ? Color.secondary : Color.primary)
         } else {
             // An unknown price is stated, never implied by a blank space.
             Text("No price")
@@ -100,7 +106,9 @@ struct ItemRow: View {
 
     /// One sentence that reads naturally, instead of four disconnected labels.
     private var accessibilityLabel: String {
-        var parts: [String] = [item.displayName]
+        var parts: [String] = []
+        if item.isObtained { parts.append(String(localized: "Obtained")) }
+        parts.append(item.displayName)
         if let retailer = item.displayRetailer {
             parts.append(String(localized: "from \(retailer)"))
         }
@@ -110,8 +118,8 @@ struct ItemRow: View {
             parts.append(String(localized: "price unavailable"))
         }
         if showsObtainedDate, let obtained = item.dateObtained {
-            parts.append(String(localized: "obtained \(DateText.friendly(obtained))"))
-        } else if item.availability.isNoteworthy {
+            parts.append(String(localized: "on \(DateText.friendly(obtained))"))
+        } else if item.availability.isNoteworthy, !item.isObtained {
             parts.append(item.availability.label)
         }
         if let change = item.priceChange, !item.isObtained {

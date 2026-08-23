@@ -56,19 +56,6 @@ struct WishlistsManagerView: View {
             .sheet(isPresented: $isCreating) {
                 WishlistEditorSheet(wishlist: nil)
             }
-            .confirmationDialog(
-                Text(deletionTitle),
-                isPresented: deletionBinding,
-                titleVisibility: .visible,
-                presenting: pendingDeletion
-            ) { list in
-                Button(String(localized: "Delete List"), role: .destructive) {
-                    repository.deleteWishlist(id: list.id)
-                }
-                Button(String(localized: "Cancel"), role: .cancel) {}
-            } message: { _ in
-                Text("The items on it are kept — they just stop belonging to a list.")
-            }
         }
     }
 
@@ -94,6 +81,19 @@ struct WishlistsManagerView: View {
                 }
                 // Otherwise the row reads as "Tech, 3" and the 3 is anyone's guess.
                 .accessibilityLabel(Text(rowLabel(for: list)))
+                // Anchored to the row it is about.
+                .confirmationDialog(
+                    Text(deletionTitle(for: list)),
+                    isPresented: deletionBinding(for: list),
+                    titleVisibility: .visible
+                ) {
+                    Button(String(localized: "Delete List"), role: .destructive) {
+                        repository.deleteWishlist(id: list.id)
+                    }
+                    Button(String(localized: "Cancel"), role: .cancel) {}
+                } message: {
+                    Text("The items on it are kept — they just stop belonging to a list.")
+                }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         pendingDeletion = list
@@ -113,16 +113,14 @@ struct WishlistsManagerView: View {
             : String(localized: "\(list.displayName), \(count) items")
     }
 
-    private var deletionTitle: String {
-        guard let name = pendingDeletion?.displayName else {
-            return String(localized: "Delete List?")
-        }
-        return String(localized: "Delete “\(name)”?")
+    private func deletionTitle(for list: Wishlist) -> String {
+        String(localized: "Delete “\(list.displayName)”?")
     }
 
-    private var deletionBinding: Binding<Bool> {
+    /// One dialog per row, each true only for the row being deleted.
+    private func deletionBinding(for list: Wishlist) -> Binding<Bool> {
         Binding(
-            get: { pendingDeletion != nil },
+            get: { pendingDeletion?.id == list.id },
             set: { if !$0 { pendingDeletion = nil } }
         )
     }

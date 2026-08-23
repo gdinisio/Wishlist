@@ -1,6 +1,6 @@
 # Wishlist
 
-**Version 7.0** — see [CHANGELOG.md](CHANGELOG.md).
+**Version 7.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 A native iOS app for saving things you want to buy. Paste a link, Wishlist finds
 the name, price, picture and availability, and keeps it until you get it.
@@ -187,7 +187,13 @@ what it is rather than as a missing product.
 
 **Pinning** floats the things you want most, or soonest, into their own section
 at the top — pin from a swipe or the context menu. Marking something obtained
-unpins it automatically, since the question a pin asks has been answered.
+unpins it automatically, since the question a pin asks has been answered. A
+count and total sit at the end of the list, after what they summarise.
+
+**Obtained items are struck through**, on the row and on their own screen, so
+the state is legible without relying on colour. Marking something obtained — or
+putting it back on the wishlist — closes its screen, since the item has left the
+list that screen was opened from.
 
 
 **Wishlists** are lists you create and name — "Tech", "Back to School", a room,

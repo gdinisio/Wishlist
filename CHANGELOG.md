@@ -1,5 +1,35 @@
 # Changelog
 
+## 7.1 — Four refinements
+
+- **A delete confirmation is presented from the row it is about**, not from the
+  screen. It was attached to the whole list, so a question about one item was
+  anchored to all of them. The same change is made on Obtained and on Edit
+  Wishlists, so all three behave alike.
+- **The count and total moved to the end of the list.** They were the header of
+  the unpinned section, which put them between Pinned and everything else,
+  reading as a heading for the wrong group — and, in a plain list, floating over
+  the rows as a sticky header. A summary belongs after what it summarises, which
+  is where the Obtained screen already put it.
+- **Obtained items are struck through** — on the row and on the item's own
+  screen — with the name and price dropping to secondary. The item's screen also
+  states "Obtained" outright with the date, rather than leaving it to be
+  inferred from the button at the bottom, and hides the availability badge and
+  price-change label, which describe something you are no longer waiting for.
+  VoiceOver leads with "Obtained", since a strikethrough is invisible to it.
+- **Moving an item back to your wishlist closes its screen and shows the
+  wishlist.** The item had left the list the screen was opened from, so the
+  screen sat on a record its parent list no longer contained. Marking something
+  obtained now closes it too, for the same reason — the undo lives back on the
+  list. Handled where the status changes rather than at the button, so the
+  toolbar menu and a swipe on the list behind behave identically.
+
+The obtained treatment stops at the strikethrough. A checkmark badge on each
+thumbnail was tried and dropped: obtained items only ever appear on the Obtained
+screen, where every row is obtained and the title, the month grouping and the
+strikethrough have already said so — and it covered the picture, which is what
+you actually recognise the thing by.
+
 ## 7.0 — Wishlists
 
 Collections are replaced by **wishlists you create and name** — "Tech", "Back to

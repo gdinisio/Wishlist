@@ -14,6 +14,7 @@ struct ItemDetailScreen: View {
 
     @Environment(WishlistRepository.self) private var repository
     @Environment(SettingsStore.self) private var settings
+    @Environment(AppRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -46,6 +47,16 @@ struct ItemDetailScreen: View {
             // from anywhere else: the screen leaves rather than sitting on a
             // record that no longer exists.
             if hasGone { dismiss() }
+        }
+        .onChange(of: repository.item(id: itemID)?.status) { previous, current in
+            // The item has left the list this screen was opened from, so the
+            // screen goes with it — and the undo lives back on that list.
+            // Written here rather than at the button so the toolbar menu and a
+            // swipe on the list behind behave the same way.
+            guard let previous, let current, previous != current else { return }
+            dismiss()
+            // "Move Back to Wishlist" names a destination, so go there.
+            if current == .active { router.selectedTab = .wishlist }
         }
     }
 
@@ -155,6 +166,8 @@ struct ItemDetailScreen: View {
                         .font(.title3)
                         .fontWeight(.semibold)
                         .fixedSize(horizontal: false, vertical: true)
+                        .strikethrough(item.isObtained, color: Color.secondary)
+                        .foregroundStyle(item.isObtained ? Color.secondary : Color.primary)
                 }
             }
             .padding(.vertical, 8)
@@ -184,11 +197,23 @@ struct ItemDetailScreen: View {
                 }
             }
 
-            if let change = item.priceChange {
+            if item.isObtained {
+                Label(
+                    item.dateObtained.map { String(localized: "Obtained \(DateText.friendly($0))") }
+                        ?? String(localized: "Obtained"),
+                    systemImage: "checkmark.circle.fill"
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+
+            if let change = item.priceChange, !item.isObtained {
                 PriceChangeLabel(change: change, isCompact: false)
             }
 
-            AvailabilityBadge(availability: item.availability)
+            if !item.isObtained {
+                AvailabilityBadge(availability: item.availability)
+            }
 
             budgetStanding(item)
 

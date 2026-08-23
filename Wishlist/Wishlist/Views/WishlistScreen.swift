@@ -176,19 +176,6 @@ struct WishlistScreen: View {
                 } message: {
                     Text("Group things you want — Tech, Back to School, Kitchen.")
                 }
-                .confirmationDialog(
-                    Text(deletionTitle),
-                    isPresented: deletionBinding,
-                    titleVisibility: .visible,
-                    presenting: pendingDeletion
-                ) { item in
-                    Button(String(localized: "Delete"), role: .destructive) {
-                        repository.delete(id: item.id)
-                    }
-                    Button(String(localized: "Cancel"), role: .cancel) {}
-                } message: { _ in
-                    Text("This item will be removed from your wishlist.")
-                }
                 .overlay(alignment: .bottom) {
                     FeedbackOverlay()
                 }
@@ -243,24 +230,40 @@ struct WishlistScreen: View {
                         .textCase(nil)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                } footer: {
+                    // Only when nothing follows, so the total is always last.
+                    if unpinnedItems.isEmpty { summaryFooter }
                 }
             }
 
-            Section {
-                ForEach(unpinnedItems) { item in
-                    row(for: item)
-                }
-            } header: {
-                if searchText.isEmpty, let summary = listSummary {
-                    Text(summary)
-                        .textCase(nil)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(Text(summary))
+            if !unpinnedItems.isEmpty {
+                Section {
+                    ForEach(unpinnedItems) { item in
+                        row(for: item)
+                    }
+                } footer: {
+                    summaryFooter
                 }
             }
         }
         .listStyle(.plain)
+    }
+
+    /// A count and a total summarise what you have just read, so they belong
+    /// after it — the way a statement totals at the bottom, and the way the
+    /// Obtained screen already does it. Between Pinned and the rest it read as
+    /// a heading for the wrong thing.
+    @ViewBuilder
+    private var summaryFooter: some View {
+        if searchText.isEmpty, let summary = listSummary {
+            Text(summary)
+                .textCase(nil)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
+                .accessibilityLabel(Text(summary))
+        }
     }
 
     /// Shared by the pinned and unpinned sections, so the two can never drift
@@ -268,6 +271,20 @@ struct WishlistScreen: View {
     private func row(for item: WishlistItem) -> some View {
         NavigationLink(value: item.id) {
             ItemRow(item: item)
+        }
+        // Presented from the row rather than from the screen, so the question
+        // is anchored to the thing it is about instead of to the whole list.
+        .confirmationDialog(
+            Text(deletionTitle(for: item)),
+            isPresented: deletionBinding(for: item),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Delete"), role: .destructive) {
+                repository.delete(id: item.id)
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text("This item will be removed from your wishlist.")
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -430,14 +447,15 @@ struct WishlistScreen: View {
         return parts.joined(separator: " · ")
     }
 
-    private var deletionTitle: String {
-        guard let name = pendingDeletion?.displayName else { return String(localized: "Delete Item?") }
-        return String(localized: "Delete “\(name)”?")
+    private func deletionTitle(for item: WishlistItem) -> String {
+        String(localized: "Delete “\(item.displayName)”?")
     }
 
-    private var deletionBinding: Binding<Bool> {
+    /// One dialog per row, each true only for the row being deleted, so the
+    /// list never presents more than one.
+    private func deletionBinding(for item: WishlistItem) -> Binding<Bool> {
         Binding(
-            get: { pendingDeletion != nil },
+            get: { pendingDeletion?.id == item.id },
             set: { if !$0 { pendingDeletion = nil } }
         )
     }

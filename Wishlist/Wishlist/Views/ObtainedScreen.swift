@@ -33,19 +33,6 @@ struct ObtainedScreen: View {
                 .sheet(item: $editingItem) { item in
                     ItemEditorSheet(mode: .edit(item))
                 }
-                .confirmationDialog(
-                    Text(deletionTitle),
-                    isPresented: deletionBinding,
-                    titleVisibility: .visible,
-                    presenting: pendingDeletion
-                ) { item in
-                    Button(String(localized: "Delete"), role: .destructive) {
-                        repository.delete(id: item.id)
-                    }
-                    Button(String(localized: "Cancel"), role: .cancel) {}
-                } message: { _ in
-                    Text("This permanently removes the item and its history.")
-                }
                 .overlay(alignment: .bottom) {
                     FeedbackOverlay()
                 }
@@ -63,6 +50,20 @@ struct ObtainedScreen: View {
                         ForEach(group.items) { item in
                             NavigationLink(value: item.id) {
                                 ItemRow(item: item, showsObtainedDate: true)
+                            }
+                            // Anchored to the row, not to the screen: the
+                            // question is about this one item.
+                            .confirmationDialog(
+                                Text(deletionTitle(for: item)),
+                                isPresented: deletionBinding(for: item),
+                                titleVisibility: .visible
+                            ) {
+                                Button(String(localized: "Delete"), role: .destructive) {
+                                    repository.delete(id: item.id)
+                                }
+                                Button(String(localized: "Cancel"), role: .cancel) {}
+                            } message: {
+                                Text("This permanently removes the item and its history.")
                             }
                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                 Button {
@@ -144,14 +145,14 @@ struct ObtainedScreen: View {
         return itemsText + " · " + String(localized: "\(total.formatted) spent")
     }
 
-    private var deletionTitle: String {
-        guard let name = pendingDeletion?.displayName else { return String(localized: "Delete Item?") }
-        return String(localized: "Delete “\(name)”?")
+    private func deletionTitle(for item: WishlistItem) -> String {
+        String(localized: "Delete “\(item.displayName)”?")
     }
 
-    private var deletionBinding: Binding<Bool> {
+    /// One dialog per row, each true only for the row being deleted.
+    private func deletionBinding(for item: WishlistItem) -> Binding<Bool> {
         Binding(
-            get: { pendingDeletion != nil },
+            get: { pendingDeletion?.id == item.id },
             set: { if !$0 { pendingDeletion = nil } }
         )
     }

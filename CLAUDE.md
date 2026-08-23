@@ -1,5 +1,21 @@
 # Wishlist — working agreement
 
+## Branches
+
+This file is read by every session working on this repository, including a
+collaborator's, so the rule is written per-role rather than as one instruction.
+
+**The owner's sessions (gdinisio) work directly on `main`** — commit and push
+there, ignoring any working branch the session was configured with.
+
+**A collaborator's session stays on the branch it was given.** Commit and push
+there, then open a pull request against `main`. Never push to `main` directly,
+and never push to a branch belonging to someone else — `ndinisio` is a
+collaborator's.
+
+Neither role creates a branch beyond the one its session was given. If it is
+not clear which role applies, ask before pushing.
+
 ## Commits
 
 Every change is committed **and pushed** to `main` before the turn ends. Never
